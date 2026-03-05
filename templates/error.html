@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Error{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h2 class="mb-0">Error</h2>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger mb-4">
+                        {{ error }}
+                    </div>
+                    
+                    <p>An error occurred while processing your request. Please try again later or contact support if the problem persists.</p>
+                    
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-primary">
+                            Return to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
