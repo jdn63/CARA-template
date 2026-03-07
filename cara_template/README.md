@@ -14,8 +14,8 @@ Prerequisites:
 Setup:
 1. Clone this repository
 2. Copy .env.example to .env and configure your environment variables
-3. Install dependencies: pip install -r requirements.txt
-4. Initialize the database: python -c "from core import create_app; app = create_app(); app.app_context().__enter__()"
+3. Add dependencies: pip -r requirements.txt
+4. Initialize the database
 5. Run: gunicorn --bind 0.0.0.0:5000 --reload main:app
 
 ## Adaptation Guide
@@ -28,48 +28,44 @@ To adapt CARA for your state or region:
 
 2. Regional Structure (utils/herc_data.py):
    - Replace HERC regions with your state's health planning regions
-   - Update county-to-region mappings
+   - Update regional groupings and metadata
 
-3. Risk Data Files (data/):
-   - data/dam_inventory/ - Replace with your state's NID dam data
-   - data/disease/ - Replace with your state's vector-borne disease baselines
-   - data/census/ - Replace with your state's Census ACS data
+3. Data Sources (data/ directory):
+   - Replace county-level CSV files with your state's demographic data
+   - Update Census tract data for your state's FIPS codes
+   - Replace tribal jurisdiction data if applicable
 
-4. Configuration (config/):
-   - config/risk_weights.yaml - Adjust domain weights for your risk profile
-   - config/county_baselines.yaml - Set baselines for your jurisdictions
+4. Risk Configuration (config/):
+   - risk_weights.yaml: Adjust domain weights for your jurisdiction's priorities
+   - county_baselines.yaml: Set baseline scores for your counties
 
-5. Data Sources (utils/):
-   - utils/wisconsin_dhs_scraper.py - Adapt for your state's health department data source
-   - utils/noaa_storm_events.py - Update state filter from WISCONSIN
-   - utils/openfema_data.py - Update state FIPS code
-   - utils/svi_data.py - Update state FIPS code
+5. External APIs:
+   - OpenFEMA: Update state filter from "Wisconsin" to your state
+   - NOAA Storm Events: Update state filter
+   - EPA AirNow: Update monitoring station coordinates
+   - Dam Safety: Update to your state's dam inventory source
 
 6. Templates (templates/):
-   - Update branding, state name references, and region names
-   - Update map images in static/images/regions/
+   - Update state-specific references and branding
+   - Modify regional dashboard labels
 
-7. GeoJSON (static/geojson/):
-   - Replace Wisconsin county boundaries with your state's boundaries
+## Risk Domains
 
-## Architecture
-
-- Backend: Flask + PostgreSQL + APScheduler
-- Frontend: Jinja2 + Bootstrap 5 + Folium maps
-- Risk Framework: PHRAT (Public Health Risk Assessment Tool) with EVR (Exposure-Vulnerability-Resilience) methodology
-- Data: Pre-cached architecture where all external APIs are fetched by scheduler with zero API calls during assessments
-
-## Risk Domains (7 for PH, 8 for EM)
-
-1. Natural Hazards (flood, tornado, winter storm, thunderstorm)
-2. Health Metrics (infectious disease surveillance)
-3. Active Shooter
-4. Extreme Heat (climate-adjusted)
-5. Air Quality
-6. Dam Failure
-7. Vector-Borne Disease
-8. Utilities (EM discipline only)
+| Domain | Default Weight | Description |
+|--------|---------------|-------------|
+| Natural Hazards | 28% | Flood, tornado, winter storm, thunderstorm EVR assessment |
+| Health Metrics | 17% | Infectious disease surveillance and vaccination rates |
+| Active Shooter | 18% | Community violence risk assessment |
+| Extreme Heat | 11% | Heat vulnerability and climate-adjusted risk |
+| Air Quality | 12% | Environmental health and AQI assessment |
+| Dam Failure | 7% | Dam infrastructure risk using state dam inventory with flood zone analysis |
+| Vector-Borne Disease | 7% | Tick-borne and mosquito-borne illness surveillance |
 
 ## License
 
-AGPLv3 - See LICENSE file
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+See the LICENSE file for details.
+
+## Citation
+
+If you use CARA in your work, please cite using the CITATION.cff file included in this repository.

@@ -2015,11 +2015,11 @@
                             ~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.dam_failure_components.exposure) ~ ' &times; ' ~ "%.3f"|format(risk_data.dam_failure_components.vulnerability) ~ ') &times; (2.0 - ' ~ "%.3f"|format(risk_data.dam_failure_components.resilience) ~ ') &times; ' ~ "%.3f"|format(risk_data.dam_failure_components.health_impact) ~ '</div>'
                             ~ '<ul class="component-list">'
                             ~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.dam_failure_components.exposure) ~ ' (dam density, hazard classification, flood zone overlap)</li>'
-                            ~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.dam_failure_components.vulnerability) ~ ' (downstream population, SVI themes)</li>'
+                            ~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.dam_failure_components.vulnerability) ~ ' (est. % population in inundation zones, SVI themes)</li>'
                             ~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.dam_failure_components.resilience) ~ ' (emergency action plans, socioeconomic capacity)</li>'
                             ~ '<li>Health Impact Factor: ' ~ "%.3f"|format(risk_data.dam_failure_components.health_impact) ~ '</li>'
                             ~ '</ul>'
-                            ~ '<div class="data-source">Sources: NID, Wisconsin DNR Dam Safety, FEMA NRI, CDC SVI, U.S. Census</div>'
+                            ~ '<div class="data-source">Sources: WI DNR Dam Safety Database, USACE NID, OpenFEMA NFIP, CDC SVI, U.S. Census</div>'
                             ) }}
                             {% endif %}
                             </h3>
@@ -2105,9 +2105,33 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td>Downstream Pop. Exposure</td>
-                                    <td>{{ dfm.downstream_population_exposure|default(0) }}</td>
+                                    <td>Est. Population Exposed</td>
+                                    <td>{{ dfm.estimated_pct_population_exposed|default(0) }}%</td>
                                 </tr>
+                                {% if dfm.total_storage_acre_ft is defined and dfm.total_storage_acre_ft %}
+                                <tr>
+                                    <td>Total Storage Capacity</td>
+                                    <td>{{ "{:,.0f}".format(dfm.total_storage_acre_ft) }} acre-ft</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.max_dam_height_ft is defined and dfm.max_dam_height_ft %}
+                                <tr>
+                                    <td>Max Dam Height</td>
+                                    <td>{{ dfm.max_dam_height_ft }} ft</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.eap_count is defined %}
+                                <tr>
+                                    <td>Dams with EAPs</td>
+                                    <td>{{ dfm.eap_count }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.dam_data_source is defined %}
+                                <tr>
+                                    <td>Data Source</td>
+                                    <td><span class="badge bg-info">{{ dfm.dam_data_source }}</span></td>
+                                </tr>
+                                {% endif %}
                                 {% else %}
                                 <tr>
                                     <td colspan="2" class="text-muted">Data loading...</td>
@@ -2130,7 +2154,7 @@
                     </div>
                     <div class="mt-3">
                         <small class="text-muted">
-                            Sources: National Inventory of Dams, Wisconsin DNR Dam Safety, FEMA NRI, CDC SVI
+                            Sources: WI DNR Dam Safety Database, USACE NID, OpenFEMA NFIP, CDC SVI, U.S. Census
                         </small>
                     </div>
                 </div>

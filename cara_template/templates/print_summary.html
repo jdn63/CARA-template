@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% elif risk_name == 'thunderstorm' %}
                                 NOAA NCEI Storm Events, FEMA NRI, CDC SVI, Census ACS, EPA/NOAA Climate Projections
                             {% elif risk_name == 'dam_failure' %}
-                                National Inventory of Dams (NID), Wisconsin DNR Dam Safety Program, FEMA NRI Flood Layer, CDC SVI, Census ACS
+                                WI DNR Dam Safety Database, USACE National Inventory of Dams, OpenFEMA NFIP Claims, CDC SVI, Census ACS
                             {% elif risk_name == 'vector_borne_disease' %}
                                 Wisconsin DHS Tick-Borne Surveillance, CDC ArboNET, USDA Forest Service NLCD, Wisconsin DNR, CDC SVI, Census ACS, NOAA/WICCI Climate Projections
                             {% else %}
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% elif risk_name == 'thunderstorm' %}
                                 EVR framework: Exposure (NOAA severity index, lightning density, heavy rainfall frequency, climate trend), Vulnerability (4 CDC SVI themes, population aged 65+ (%), mobile home %, flood susceptibility, tree coverage), Resilience (community preparedness, socioeconomic capacity). NOAA historical thunderstorm events used for validation.
                             {% elif risk_name == 'dam_failure' %}
-                                EVR framework: Exposure (dam density, hazard classification severity, flood zone overlap), Vulnerability (downstream population exposure, 4 CDC SVI themes, population aged 65+ (%)), Resilience (emergency action plans, inspection programs, socioeconomic capacity). NID dam inventory data used for dam counts and hazard ratings.
+                                EVR framework: Exposure (dam density from WI DNR Dam Safety Database, hazard classification severity, flood zone overlap from NFIP claims), Vulnerability (est. % of county population in dam inundation zones based on high/significant hazard dam counts and storage capacity, 4 CDC SVI themes, population aged 65+ (%)), Resilience (emergency action plans, inspection programs, socioeconomic capacity). Real dam inventory data from WI DNR (~4,100 active dams statewide).
                             {% elif risk_name == 'vector_borne_disease' %}
                                 EVR framework: Exposure (historical Lyme/WNV case rates, forest cover, deer density, seasonal factors, climate trend), Vulnerability (outdoor workforce %, elderly %, rural factor, SVI socioeconomic themes), Resilience (surveillance programs, public awareness, healthcare access). Seasonal adjustment for tick season (Apr-Oct) and mosquito season (Jun-Sep).
                             {% else %}

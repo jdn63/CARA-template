@@ -28,17 +28,6 @@ TRIBAL_KEYWORDS = ['Ho-Chunk', 'HoChunk', 'Menominee', 'Oneida', 'Lac du Flambea
                    'Bad River', 'Red Cliff', 'Potawatomi', 'St. Croix', 'Sokaogon',
                    'Lac Courte Oreilles']
 
-DOWNSTREAM_POPULATION_TIERS = {
-    'Milwaukee': 0.85, 'Dane': 0.78, 'Waukesha': 0.72, 'Brown': 0.65,
-    'Racine': 0.62, 'Kenosha': 0.60, 'Outagamie': 0.58, 'Winnebago': 0.55,
-    'Rock': 0.55, 'Marathon': 0.52, 'La Crosse': 0.50, 'Eau Claire': 0.48,
-    'Sheboygan': 0.45, 'Fond du Lac': 0.45, 'Manitowoc': 0.42,
-    'Walworth': 0.40, 'Washington': 0.42, 'Ozaukee': 0.40,
-    'St. Croix': 0.38, 'Columbia': 0.38, 'Sauk': 0.40,
-    'Jefferson': 0.38, 'Dodge': 0.35, 'Portage': 0.35,
-    'Wood': 0.32, 'Chippewa': 0.35, 'Dunn': 0.30,
-}
-
 EOC_COUNTIES = ['Milwaukee', 'Dane', 'Brown', 'Waukesha', 'Racine',
                 'La Crosse', 'Outagamie', 'Marathon', 'Eau Claire', 'Winnebago']
 
@@ -74,18 +63,70 @@ def load_dam_inventory() -> Dict[str, Any]:
     return _dam_data_cache
 
 
+def _get_nid_cached_data(county_name: str) -> Optional[Dict[str, Any]]:
+    try:
+        from flask import has_app_context
+        if not has_app_context():
+            return None
+        from utils.data_cache_manager import get_cached_data
+        cached = get_cached_data('nid_dam_inventory', county_name=county_name)
+        if cached and cached.get('data'):
+            data = cached['data']
+            if data.get('data_source') == 'NID':
+                return data
+    except Exception as e:
+        logger.debug(f"NID cache lookup failed for {county_name}: {e}")
+    return None
+
+
+def _get_nfip_flood_proxy(county_name: str) -> float:
+    try:
+        from flask import has_app_context
+        if not has_app_context():
+            return 0.15
+        from utils.data_cache_manager import get_cached_data
+        cached = get_cached_data('openfema_nfip_claims', county_name=county_name)
+        if cached and cached.get('data'):
+            total_claims = cached['data'].get('total_claims', 0)
+            if total_claims > 0:
+                return min(0.45, max(0.05, total_claims / 500.0))
+    except Exception as e:
+        logger.debug(f"NFIP flood proxy lookup failed for {county_name}: {e}")
+    return 0.15
+
+
 def _get_county_dam_data(county_name: str) -> Dict[str, Any]:
+    nid_data = _get_nid_cached_data(county_name)
+    if nid_data:
+        flood_overlap = _get_nfip_flood_proxy(county_name)
+        return {
+            'total_dams': nid_data.get('total_dams', 0),
+            'high_hazard': nid_data.get('high_hazard', 0),
+            'significant_hazard': nid_data.get('significant_hazard', 0),
+            'low_hazard': nid_data.get('low_hazard', 0),
+            'has_eap': nid_data.get('has_eap', False),
+            'flood_zone_overlap': flood_overlap,
+            'data_source': 'NID',
+            'total_storage_acre_ft': nid_data.get('total_storage_acre_ft', 0),
+            'max_dam_height_ft': nid_data.get('max_dam_height_ft', 0),
+            'eap_count': nid_data.get('eap_count', 0)
+        }
+
     inventory = load_dam_inventory()
     county_data = inventory.get('county_dam_data', {}).get(county_name)
     if county_data:
-        return county_data
+        result = dict(county_data)
+        result['data_source'] = 'static_json'
+        return result
+
     return {
         'total_dams': 10,
         'high_hazard': 1,
         'significant_hazard': 3,
         'low_hazard': 6,
         'has_eap': False,
-        'flood_zone_overlap': 0.15
+        'flood_zone_overlap': 0.15,
+        'data_source': 'fallback'
     }
 
 
@@ -121,6 +162,51 @@ def _get_census_demographics(county_name: str) -> Dict[str, float]:
     }
 
 
+def _compute_downstream_population_exposure(
+    county_name: str,
+    census: Dict[str, float],
+    dam_data: Dict[str, Any]
+) -> float:
+    population = census.get('population', 80000)
+    if population <= 0:
+        return 0.10
+
+    high_hazard = dam_data.get('high_hazard', 0)
+    significant_hazard = dam_data.get('significant_hazard', 0)
+
+    base_exposed_per_high = 3500
+    base_exposed_per_significant = 800
+
+    storage = dam_data.get('total_storage_acre_ft', 0)
+    total_dams = dam_data.get('total_dams', 1) or 1
+    if storage > 0:
+        avg_storage = storage / total_dams
+        storage_multiplier = min(2.0, max(0.5, avg_storage / 5000.0))
+    else:
+        storage_multiplier = 1.0
+
+    pop_density_factor = census.get('pop_density_factor', 0.25)
+    density_multiplier = 0.7 + (pop_density_factor * 0.6)
+
+    estimated_exposed = (
+        (high_hazard * base_exposed_per_high * storage_multiplier * density_multiplier) +
+        (significant_hazard * base_exposed_per_significant * storage_multiplier * density_multiplier)
+    )
+
+    pct_exposed = estimated_exposed / population
+
+    return min(0.95, max(0.02, pct_exposed))
+
+
+def _get_statewide_max_dams(county_name: str) -> int:
+    nid_data = _get_nid_cached_data(county_name)
+    if nid_data and nid_data.get('statewide_meta'):
+        return nid_data['statewide_meta'].get('max_county_dam_count', 25)
+
+    inventory = load_dam_inventory()
+    return inventory.get('statewide_summary', {}).get('max_county_dam_count', 25)
+
+
 def calculate_dam_failure_risk(county_name: str, discipline: str = 'public_health') -> Dict[str, Any]:
     original_name = county_name
     if _is_tribal(county_name):
@@ -131,9 +217,7 @@ def calculate_dam_failure_risk(county_name: str, discipline: str = 'public_healt
     census = _get_census_demographics(county_name)
     health_factor = get_health_impact_factor(county_name, 'dam_failure')
 
-    inventory = load_dam_inventory()
-    statewide = inventory.get('statewide_summary', {})
-    max_dams = statewide.get('max_county_dam_count', 25)
+    max_dams = _get_statewide_max_dams(county_name)
 
     dam_density = min(1.0, dam_data['total_dams'] / max_dams)
 
@@ -155,7 +239,7 @@ def calculate_dam_failure_risk(county_name: str, discipline: str = 'public_healt
         (flood_zone_overlap * 0.25)
     ))
 
-    downstream_pop_exposure = DOWNSTREAM_POPULATION_TIERS.get(county_name, 0.25)
+    downstream_pop_exposure = _compute_downstream_population_exposure(county_name, census, dam_data)
 
     if discipline == 'em':
         infrastructure_density = census['pop_density_factor']
@@ -211,6 +295,9 @@ def calculate_dam_failure_risk(county_name: str, discipline: str = 'public_healt
         health_impact_factor=health_factor
     )
 
+    data_source_label = dam_data.get('data_source', 'unknown')
+    using_real_nid = data_source_label == 'NID'
+
     metrics = {
         'total_dams': dam_data['total_dams'],
         'high_hazard_dams': dam_data['high_hazard'],
@@ -219,18 +306,28 @@ def calculate_dam_failure_risk(county_name: str, discipline: str = 'public_healt
         'has_emergency_action_plan': dam_data.get('has_eap', False),
         'flood_zone_overlap_pct': round(flood_zone_overlap * 100, 1),
         'downstream_population_exposure': round(downstream_pop_exposure, 2),
+        'estimated_pct_population_exposed': round(downstream_pop_exposure * 100, 1),
         'elderly_vulnerability_pct': round(census['elderly_pct'], 1),
-        'has_real_data': True
+        'has_real_data': using_real_nid,
+        'dam_data_source': data_source_label
     }
 
+    if using_real_nid:
+        metrics['total_storage_acre_ft'] = dam_data.get('total_storage_acre_ft', 0)
+        metrics['max_dam_height_ft'] = dam_data.get('max_dam_height_ft', 0)
+        metrics['eap_count'] = dam_data.get('eap_count', 0)
+
     data_sources = [
-        'U.S. Army Corps of Engineers National Inventory of Dams (NID)',
-        'Wisconsin DNR Dam Safety Program',
-        'FEMA National Risk Index - Flood Risk Layer',
+        'WI DNR Dam Safety Database (primary, ~4,100 active dams, weekly cache)',
+        'USACE National Inventory of Dams (fallback)',
+        'OpenFEMA NFIP Claims - Flood Zone Overlap Proxy',
         'CDC Social Vulnerability Index (SVI) - All 4 Themes',
         'U.S. Census Bureau ACS - Demographics',
         'Wisconsin Emergency Management - Dam Emergency Action Plans'
     ]
+
+    if not using_real_nid:
+        data_sources[0] = f'Dam data (static baseline, source: {data_source_label})'
 
     return {
         'overall': residual_risk,

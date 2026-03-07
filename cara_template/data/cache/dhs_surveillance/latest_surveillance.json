@@ -1,7 +1,7 @@
 {
   "report_url": "https://bi.wisconsin.gov/t/DHS/views/ESSENCEandNREVSS_2025-2026_For_External_Packaged/RespiratoryVirusLandingPage",
   "report_date": "2026-02-28",
-  "last_updated": "2026-03-07T05:32:16.998254",
+  "last_updated": "2026-03-07T15:46:43.882106",
   "data_source": "wisconsin_dhs_tableau",
   "statewide_activity": {
     "overall": "moderate",
@@ -72,6 +72,6 @@
       "polio_compliance": 88.3,
       "data_source": "Wisconsin DHS School Immunization Data 2024-2025"
     },
-    "last_updated": "2026-03-07T05:32:16.998704"
+    "last_updated": "2026-03-07T15:46:43.882544"
   }
 }

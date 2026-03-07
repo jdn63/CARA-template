@@ -1460,8 +1460,8 @@ def process_risk_data(jurisdiction_id: str, additional_data: Optional[FileStorag
                 'final_score': round(float(dam_failure_risk), 4),
                 'weighted_contribution': round(weights.get('dam_failure', 0.07) * (float(dam_failure_risk) ** p), 4),
                 'svi_adjustment': f'Multiplier: housing_transport={round(dam_failure_svi_multiplier, 3)}',
-                'data_sources': ['NID Wisconsin Dam Inventory (static)', 'WI DNR Dam Safety (static)', 'FEMA NRI flood data (annual cache)', 'CDC SVI (annual cache)'],
-                'aggregation': 'EVR framework (dam density × flood zone × downstream population)'
+                'data_sources': ['WI DNR Dam Safety Database (weekly cache)', 'USACE NID (fallback)', 'OpenFEMA NFIP Claims (weekly cache)', 'CDC SVI (annual cache)', 'U.S. Census ACS (annual)'],
+                'aggregation': 'EVR framework (dam density × hazard classification × flood zone overlap × est. % population in inundation zones)'
             },
             {
                 'name': 'Vector-Borne Disease',

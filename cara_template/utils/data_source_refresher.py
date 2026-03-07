@@ -571,6 +571,69 @@ def refresh_all_noaa_storm_events() -> Dict[str, Any]:
         return results
 
 
+def refresh_all_nid_dam_inventory() -> Dict[str, Any]:
+    app = _get_app()
+    if not app:
+        return {'error': 'No Flask app available', 'success': 0, 'failed': 0}
+
+    with app.app_context():
+        from utils.data_cache_manager import save_cached_data
+        from utils.nid_data import fetch_wisconsin_dam_inventory
+
+        results = {
+            'source_type': 'nid_dam_inventory',
+            'started_at': datetime.utcnow().isoformat(),
+            'success': 0,
+            'failed': 0,
+            'errors': []
+        }
+
+        logger.info("Starting NID dam inventory refresh for Wisconsin")
+
+        try:
+            data = fetch_wisconsin_dam_inventory()
+
+            if 'error' in data:
+                logger.warning(f"NID fetch returned error: {data['error']}")
+                results['errors'].append({'error': data['error']})
+                results['finished_at'] = datetime.utcnow().isoformat()
+                return results
+
+            county_data = data.get('county_data', {})
+            statewide_meta = {
+                'total_dams_fetched': data.get('total_dams_fetched', 0),
+                'max_county_dam_count': data.get('max_county_dam_count', 25),
+                'fetch_time': data.get('fetch_time'),
+                'api_source': data.get('api_source')
+            }
+
+            for county_name, county_info in county_data.items():
+                try:
+                    county_info['statewide_meta'] = statewide_meta
+                    success = save_cached_data(
+                        source_type='nid_dam_inventory',
+                        data=county_info,
+                        county_name=county_name,
+                        api_source='USACE NID ArcGIS FeatureServer',
+                        fetch_duration=data.get('fetch_duration')
+                    )
+                    if success:
+                        results['success'] += 1
+                    else:
+                        results['failed'] += 1
+                except Exception as e:
+                    results['failed'] += 1
+                    results['errors'].append({'county': county_name, 'error': str(e)})
+
+        except Exception as e:
+            logger.error(f"Error fetching NID dam inventory: {e}")
+            results['errors'].append({'error': str(e)})
+
+        results['finished_at'] = datetime.utcnow().isoformat()
+        logger.info(f"NID dam inventory refresh: {results['success']} success, {results['failed']} failed")
+        return results
+
+
 def run_all_refreshes() -> Dict[str, Any]:
     """
     Run all data source refreshes. Used for initial cache population.
@@ -592,6 +655,7 @@ def run_all_refreshes() -> Dict[str, Any]:
     results['sources']['openfema_nfip'] = refresh_all_openfema_nfip()
     results['sources']['openfema_hma'] = refresh_all_openfema_hma()
     results['sources']['noaa_storm_events'] = refresh_all_noaa_storm_events()
+    results['sources']['nid_dam_inventory'] = refresh_all_nid_dam_inventory()
     
     results['finished_at'] = datetime.utcnow().isoformat()
     
