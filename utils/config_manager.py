@@ -100,17 +100,29 @@ class RiskConfigManager:
         
         return base_weights
     
-    def get_temporal_weights(self, mode: str = 'strategic_planning') -> Dict[str, float]:
+    def get_temporal_weights(self, mode: str = 'strategic_planning', risk_type: str = None) -> Dict[str, float]:
         """
-        Get temporal component weights based on planning mode.
+        Get temporal component weights based on planning mode and optional risk type.
+        
+        If a domain-specific override exists for the risk_type, those weights
+        are returned instead of the mode-level defaults.
         
         Args:
             mode: Planning mode ('strategic_planning' or 'emergency_response')
+            risk_type: Optional risk domain for domain-specific overrides
             
         Returns:
             Dictionary of temporal component weights
         """
         temporal_config = self.config.get('temporal_weights', {})
+        
+        if risk_type:
+            domain_overrides = temporal_config.get('domain_overrides', {})
+            if risk_type in domain_overrides:
+                override = domain_overrides[risk_type]
+                logger.info(f"Using domain-specific temporal weights for {risk_type}: {override}")
+                return override
+        
         mode_weights = temporal_config.get(mode, temporal_config.get('strategic_planning', {}))
         
         if not mode_weights:

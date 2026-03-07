@@ -115,6 +115,30 @@ def create_app(config_overrides=None):
         import models  # Import all models for table creation
         db.create_all()  # Create all database tables
     
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    if app.config.get("PREFERRED_URL_SCHEME") == "https":
+        app.config["SESSION_COOKIE_SECURE"] = True
+    
+    @app.context_processor
+    def inject_globals():
+        from datetime import datetime
+        now = datetime.now()
+        month = now.month
+        if month in (3, 4, 5):
+            season = "Spring"
+        elif month in (6, 7, 8):
+            season = "Summer"
+        elif month in (9, 10, 11):
+            season = "Fall"
+        else:
+            season = "Winter"
+        return {
+            "current_year": now.year,
+            "last_updated": now.strftime("%B %Y"),
+            "current_season": season,
+        }
+    
     # Register template filters (moved from app.py)
     register_template_filters(app)
     

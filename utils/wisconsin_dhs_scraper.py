@@ -1,18 +1,3 @@
-# =============================================================================
-# WISCONSIN-SPECIFIC MODULE
-# =============================================================================
-# This module scrapes Wisconsin Department of Health Services (DHS) respiratory
-# surveillance reports. It is specific to Wisconsin's DHS website and PDF report
-# format.
-#
-# FOR OTHER JURISDICTIONS: Replace this module with a scraper or API client for
-# your jurisdiction's health department surveillance data. Your module should
-# provide functions that return disease surveillance metrics (case counts,
-# positivity rates, etc.) for each of your jurisdictions.
-#
-# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
-# =============================================================================
-
 """
 Wisconsin DHS Respiratory Surveillance Data Scraper
 
@@ -43,6 +28,7 @@ class WisconsinDHSScraper:
     def __init__(self):
         self.base_url = "https://www.dhs.wisconsin.gov"
         self.reports_url = "https://www.dhs.wisconsin.gov/influenza/data.htm"
+        self.tableau_dashboard_url = "https://bi.wisconsin.gov/t/DHS/views/ESSENCEandNREVSS_2025-2026_For_External_Packaged/RespiratoryVirusLandingPage.pdf"
         self.immunization_url = "https://www.dhs.wisconsin.gov/immunization/data.htm"
         self.cache_dir = "./data/cache/dhs_surveillance"
         os.makedirs(self.cache_dir, exist_ok=True)
@@ -106,7 +92,13 @@ class WisconsinDHSScraper:
 
     def get_latest_surveillance_data(self) -> Dict[str, Any]:
         """
-        Get the latest respiratory surveillance data from Wisconsin DHS
+        Get the latest respiratory surveillance data from Wisconsin DHS.
+        
+        Tries sources in order:
+        1. Tableau dashboard PDF export (current 2025-2026 season, updated weekly)
+        2. Legacy PDF reports from DHS influenza page (retired May 2025)
+        3. Local cache
+        4. Hardcoded fallback estimates
         
         Returns:
             Dictionary with surveillance data for risk calculations
@@ -117,32 +109,250 @@ class WisconsinDHSScraper:
                 cached = self._load_cached_surveillance_data(max_age_hours=int(os.getenv("CACHE_TTL_HOURS", "24")))
                 return cached if cached else self._get_fallback_data()
 
-            # Get list of available reports
+            tableau_data = self._fetch_tableau_dashboard()
+            if tableau_data:
+                vaccination_data = self._get_vaccination_data()
+                tableau_data["vaccination_data"] = vaccination_data
+                self._cache_surveillance_data(tableau_data)
+                return tableau_data
+            
+            logger.info("Tableau dashboard unavailable, trying legacy PDF reports")
             report_urls = self._get_recent_report_urls()
             
-            if not report_urls:
-                logger.error("No surveillance reports found")
-                return self._get_fallback_data()
+            if report_urls:
+                latest_report_url = report_urls[0]
+                logger.info(f"Processing legacy report: {latest_report_url}")
+                surveillance_data = self._extract_report_data(latest_report_url)
+                vaccination_data = self._get_vaccination_data()
+                surveillance_data["vaccination_data"] = vaccination_data
+                self._cache_surveillance_data(surveillance_data)
+                return surveillance_data
             
-            # Process the most recent report
-            latest_report_url = report_urls[0]
-            logger.info(f"Processing latest report: {latest_report_url}")
+            cached = self._load_cached_surveillance_data(max_age_hours=168)
+            if cached:
+                logger.info("Using cached surveillance data")
+                return cached
             
-            # Extract data from the PDF report
-            surveillance_data = self._extract_report_data(latest_report_url)
-            
-            # Add vaccination data
-            vaccination_data = self._get_vaccination_data()
-            surveillance_data["vaccination_data"] = vaccination_data
-            
-            # Cache the results
-            self._cache_surveillance_data(surveillance_data)
-            
-            return surveillance_data
+            logger.warning("All DHS data sources unavailable, using fallback estimates")
+            return self._get_fallback_data()
             
         except Exception as e:
             logger.error(f"Error fetching DHS surveillance data: {str(e)}")
             return self._get_fallback_data()
+    
+    def _fetch_tableau_dashboard(self) -> Dict[str, Any]:
+        """Fetch and parse the DHS Tableau respiratory virus dashboard PDF export"""
+        try:
+            logger.info("Fetching DHS Tableau respiratory virus dashboard")
+            response = self._request(self.tableau_dashboard_url, timeout=30)
+            
+            if response.status_code != 200:
+                logger.warning(f"Tableau dashboard returned status {response.status_code}")
+                return None
+            
+            reader = PdfReader(BytesIO(response.content))
+            if not reader.pages:
+                logger.warning("Tableau PDF has no pages")
+                return None
+            
+            text = reader.pages[0].extract_text()
+            if not text or len(text) < 100:
+                logger.warning("Tableau PDF text extraction yielded insufficient content")
+                return None
+            
+            logger.info(f"Extracted {len(text)} chars from Tableau dashboard PDF")
+            
+            report_date = self._extract_tableau_date(text)
+            activity_data = self._extract_tableau_activity(text)
+            lab_data = self._extract_tableau_lab(text)
+            
+            risk_indicators = self._calculate_tableau_risk(activity_data, lab_data)
+            
+            surveillance_data = {
+                "report_url": self.tableau_dashboard_url.replace('.pdf', ''),
+                "report_date": report_date,
+                "last_updated": datetime.now().isoformat(),
+                "data_source": "wisconsin_dhs_tableau",
+                "statewide_activity": activity_data,
+                "laboratory_data": lab_data,
+                "emergency_dept_data": {
+                    "respiratory_visits_percent": activity_data.get("ed_percent", 5.0),
+                    "trends": {
+                        "influenza": activity_data.get("influenza_trajectory", "stable"),
+                        "covid19": activity_data.get("covid19_trajectory", "stable"),
+                        "rsv": activity_data.get("rsv_trajectory", "stable")
+                    }
+                },
+                "regional_activity": {},
+                "risk_indicators": risk_indicators
+            }
+            
+            logger.info(f"Successfully parsed Tableau dashboard data for week ending {report_date}")
+            return surveillance_data
+            
+        except Exception as e:
+            logger.error(f"Error fetching Tableau dashboard: {str(e)}")
+            return None
+    
+    def _extract_tableau_date(self, text: str) -> str:
+        """Extract the report date from Tableau dashboard text"""
+        date_pattern = r'week ending (?:on )?([A-Z][a-z]+ \d{1,2}, \d{4})'
+        match = re.search(date_pattern, text, re.IGNORECASE)
+        if match:
+            try:
+                return datetime.strptime(match.group(1), "%B %d, %Y").strftime("%Y-%m-%d")
+            except Exception:
+                pass
+        
+        date_pattern2 = r'^([A-Z][a-z]+ \d{1,2}, \d{4})'
+        match2 = re.search(date_pattern2, text)
+        if match2:
+            try:
+                return datetime.strptime(match2.group(1), "%B %d, %Y").strftime("%Y-%m-%d")
+            except Exception:
+                pass
+        
+        return datetime.now().strftime("%Y-%m-%d")
+    
+    def _extract_tableau_activity(self, text: str) -> Dict[str, str]:
+        """Extract activity levels and trajectories from Tableau dashboard text"""
+        activity_data = {
+            "overall": "moderate",
+            "influenza": "low",
+            "covid19": "minimal",
+            "rsv": "minimal"
+        }
+        
+        overall_match = re.search(
+            r'statewide\s+respiratory illness activity.*?(?:based on|visits)\s*(Minimal|Very Low|Low|Moderate|High|Very High)',
+            text, re.IGNORECASE | re.DOTALL
+        )
+        if overall_match:
+            level = overall_match.group(1).lower().replace(' ', '_')
+            activity_data["overall"] = level
+            logger.info(f"Tableau: overall respiratory activity = {level}")
+        
+        virus_patterns = [
+            (r'Influenza\s+(Minimal|Very Low|Low|Moderate|High|Very High)\s*\n?\s*Activity', "influenza"),
+            (r'COVID-19\s+(Minimal|Very Low|Low|Moderate|High|Very High)\s*\n?\s*Activity', "covid19"),
+            (r'RSV\s+(Minimal|Very Low|Low|Moderate|High|Very High)\s*\n?\s*Activity', "rsv"),
+        ]
+        
+        for pattern, key in virus_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                level = match.group(1).lower().replace(' ', '_')
+                activity_data[key] = level
+        
+        trajectory_patterns = [
+            (r'Influenza\s+(?:Minimal|Very Low|Low|Moderate|High|Very High)\s*\n?\s*Activity\s*\n?\s*(Stable|Increasing|Decreasing)', "influenza_trajectory"),
+            (r'(Stable|Increasing|Decreasing)\s*\n\s*Influenza\s+(?:Minimal|Very Low|Low|Moderate|High|Very High)', "influenza_trajectory"),
+            (r'COVID-19\s+(?:Minimal|Very Low|Low|Moderate|High|Very High)\s*\n?\s*Activity\s*\n?\s*(Stable|Increasing|Decreasing)', "covid19_trajectory"),
+            (r'RSV\s+(?:Minimal|Very Low|Low|Moderate|High|Very High)\s*\n?\s*Activity\s*\n?\s*(Stable|Increasing|Decreasing)', "rsv_trajectory"),
+        ]
+        
+        for pattern, key in trajectory_patterns:
+            if key not in activity_data or activity_data.get(key) is None:
+                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    activity_data[key] = match.group(1).lower()
+        
+        overall_pattern = r'(?:Moderate|High|Low|Minimal|Very High|Very Low)\s*\n?\s*Activity\s+(Stable|Increasing|Decreasing)'
+        overall_trajectory = re.search(overall_pattern, text, re.IGNORECASE)
+        if overall_trajectory:
+            activity_data["overall_trajectory"] = overall_trajectory.group(1).lower()
+        
+        ed_pct_match = re.search(r'(\d+)%\s*\n\s*Overall respiratory', text, re.IGNORECASE)
+        if ed_pct_match:
+            activity_data["ed_percent"] = float(ed_pct_match.group(1))
+        
+        top_section = re.search(r'Top five.*?testing data\s*\n\s*1\.\s*\n\s*2\.\s*\n\s*3\.\s*\n\s*4\.\s*\n\s*5\.\s*\n(.+?)(?:Data for week|This list)', text, re.IGNORECASE | re.DOTALL)
+        if top_section:
+            virus_lines = [l.strip() for l in top_section.group(1).strip().split('\n') if l.strip() and not l.strip().startswith('Data for')]
+            top_viruses = virus_lines[:5]
+            if top_viruses:
+                activity_data["predominant_virus"] = top_viruses[0]
+                activity_data["top_viruses"] = top_viruses
+                logger.info(f"Top circulating viruses: {top_viruses}")
+        else:
+            numbered_pattern = r'(?:1\.\s*\n\s*2\.\s*\n\s*3\.\s*\n\s*4\.\s*\n\s*5\.\s*\n)(.+?)(?:Data for|This list)'
+            numbered_match = re.search(numbered_pattern, text, re.DOTALL)
+            if numbered_match:
+                virus_lines = [l.strip() for l in numbered_match.group(1).strip().split('\n') if l.strip()]
+                top_viruses = virus_lines[:5]
+                if top_viruses:
+                    activity_data["predominant_virus"] = top_viruses[0]
+                    activity_data["top_viruses"] = top_viruses
+        
+        return activity_data
+    
+    def _extract_tableau_lab(self, text: str) -> Dict[str, float]:
+        """Extract lab positivity data from Tableau dashboard (limited on landing page)"""
+        lab_data = {
+            "influenza_percent": 2.5,
+            "covid19_percent": 2.3,
+            "rsv_percent": 0.8,
+            "rhinovirus_percent": 12.1
+        }
+        
+        lab_patterns = [
+            (r'Influenza\s+[\d,]+\s+\d+\s+(\d+\.?\d*)%', "influenza_percent"),
+            (r'COVID-19\s+[\d,]+\s+\d+\s+(\d+\.?\d*)%', "covid19_percent"),
+            (r'Respiratory Syncytial Virus\s+[\d,]+\s+\d+\s+(\d+\.?\d*)%', "rsv_percent"),
+            (r'Rhinovirus/Enterovirus\s+[\d,]+\s+\d+\s+(\d+\.?\d*)%', "rhinovirus_percent"),
+        ]
+        
+        for pattern, key in lab_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                try:
+                    val = float(match.group(1))
+                    if 0 <= val <= 100:
+                        lab_data[key] = val
+                except Exception:
+                    pass
+        
+        return lab_data
+    
+    def _calculate_tableau_risk(self, activity_data: Dict, lab_data: Dict) -> Dict[str, float]:
+        """Calculate risk indicators from Tableau dashboard data"""
+        level_scores = {
+            "minimal": 0.1, "very_low": 0.2, "low": 0.3,
+            "moderate": 0.6, "high": 0.8, "very_high": 1.0
+        }
+        
+        overall_score = level_scores.get(activity_data.get("overall", "moderate"), 0.5)
+        
+        flu_score = level_scores.get(activity_data.get("influenza", "low"), 0.3)
+        covid_score = level_scores.get(activity_data.get("covid19", "minimal"), 0.1)
+        rsv_score = level_scores.get(activity_data.get("rsv", "minimal"), 0.1)
+        
+        virus_avg = (flu_score + covid_score + rsv_score) / 3
+        activity_risk = max(overall_score, virus_avg)
+        
+        lab_risk = min(1.0, (
+            lab_data.get("influenza_percent", 0) * 0.03 +
+            lab_data.get("covid19_percent", 0) * 0.03 +
+            lab_data.get("rsv_percent", 0) * 0.04
+        ))
+        
+        trajectory_boost = 0.0
+        for key in ["influenza_trajectory", "covid19_trajectory", "rsv_trajectory"]:
+            traj = activity_data.get(key, "stable")
+            if traj == "increasing":
+                trajectory_boost += 0.05
+            elif traj == "decreasing":
+                trajectory_boost -= 0.03
+        
+        combined = (activity_risk * 0.5 + lab_risk * 0.3 + (activity_risk + trajectory_boost) * 0.2)
+        combined = max(0.0, min(1.0, combined))
+        
+        return {
+            "activity_risk": round(activity_risk, 3),
+            "laboratory_risk": round(lab_risk, 3),
+            "combined_risk": round(combined, 3),
+            "confidence": 0.85
+        }
     
     def _get_recent_report_urls(self, limit: int = 5) -> List[str]:
         """Get URLs of recent surveillance reports from DHS HTML page"""
@@ -171,9 +381,11 @@ class WisconsinDHSScraper:
             
             reader = PdfReader(BytesIO(response.content))
             text_content = ""
+            page_texts = []
             for page in reader.pages:
                 page_text = page.extract_text()
                 if page_text:
+                    page_texts.append(page_text)
                     text_content += page_text + "\n"
             
             if not text_content:
@@ -182,15 +394,18 @@ class WisconsinDHSScraper:
             
             logger.info(f"Extracted {len(text_content)} chars from PDF: {report_url}")
             
+            lab_table_text = self._find_lab_table_page(page_texts)
+            
             surveillance_data = {
                 "report_url": report_url,
                 "report_date": self._extract_report_date(text_content),
                 "last_updated": datetime.now().isoformat(),
+                "data_source": "wisconsin_dhs_pdf",
                 "statewide_activity": self._extract_activity_level(text_content),
-                "laboratory_data": self._extract_lab_data(text_content),
+                "laboratory_data": self._extract_lab_data(lab_table_text or text_content),
                 "emergency_dept_data": self._extract_ed_data(text_content),
                 "regional_activity": self._extract_regional_data(text_content),
-                "risk_indicators": self._calculate_risk_indicators(text_content)
+                "risk_indicators": self._calculate_risk_indicators(lab_table_text or text_content)
             }
             
             logger.info(f"Successfully extracted surveillance data from {report_url}")
@@ -199,6 +414,15 @@ class WisconsinDHSScraper:
         except Exception as e:
             logger.error(f"Error extracting data from report {report_url}: {str(e)}")
             return self._get_fallback_data()
+    
+    def _find_lab_table_page(self, page_texts: list) -> str:
+        """Find the page containing the NREVSS lab positivity table with virus-level data"""
+        for page_text in page_texts:
+            if 'Number and percent positivity' in page_text or 'percent positivity of respiratory viruses' in page_text.lower():
+                if 'Respiratory Syncytial Virus' in page_text and 'COVID-19' in page_text:
+                    logger.info("Found NREVSS lab positivity table page")
+                    return page_text
+        return None
     
     def _extract_report_date(self, text_content: str) -> str:
         """Extract report date from PDF content"""
@@ -219,7 +443,7 @@ class WisconsinDHSScraper:
         return datetime.now().strftime("%Y-%m-%d")
     
     def _extract_activity_level(self, text_content: str) -> Dict[str, str]:
-        """Extract statewide respiratory illness activity level"""
+        """Extract statewide respiratory illness activity level from PDF text"""
         activity_data = {
             "overall": "moderate",
             "influenza": "low", 
@@ -227,47 +451,52 @@ class WisconsinDHSScraper:
             "rsv": "minimal"
         }
         
-        # Look for key findings section
+        text_lower = text_content.lower()
+        
         findings_pattern = r'Key Findings[:\s]*(.*?)(?:Influenza|$)'
         findings_match = re.search(findings_pattern, text_content, re.IGNORECASE | re.DOTALL)
         
         if findings_match:
             findings_text = findings_match.group(1).lower()
-            
-            # Extract activity levels for different viruses
-            if 'statewide respiratory illness levels are low' in findings_text:
-                activity_data["overall"] = "low"
-            elif 'statewide respiratory illness levels are minimal' in findings_text:
-                activity_data["overall"] = "minimal"
-            elif 'statewide respiratory illness levels are moderate' in findings_text:
-                activity_data["overall"] = "moderate"
-            elif 'statewide respiratory illness levels are high' in findings_text:
-                activity_data["overall"] = "high"
-            
-            # Influenza activity
-            if 'influenza activity is low' in findings_text:
-                activity_data["influenza"] = "low"
-            elif 'influenza activity is minimal' in findings_text:
-                activity_data["influenza"] = "minimal"
-            
-            # COVID-19 activity  
+            for level in ['very high', 'high', 'moderate', 'low', 'minimal']:
+                if f'statewide respiratory illness levels are {level}' in findings_text:
+                    activity_data["overall"] = level.replace(' ', '_')
+                    break
+            for level in ['very high', 'high', 'moderate', 'low', 'minimal']:
+                if f'influenza activity is {level}' in findings_text:
+                    activity_data["influenza"] = level.replace(' ', '_')
+                    break
             if 'covid-19' in findings_text:
-                if 'minimal' in findings_text:
-                    activity_data["covid19"] = "minimal"
-                elif 'low' in findings_text:
-                    activity_data["covid19"] = "low"
-            
-            # RSV activity
+                for level in ['very high', 'high', 'moderate', 'low', 'minimal']:
+                    if level in findings_text:
+                        activity_data["covid19"] = level.replace(' ', '_')
+                        break
             if 'rsv' in findings_text:
-                if 'minimal' in findings_text:
-                    activity_data["rsv"] = "minimal"
-                elif 'low' in findings_text:
-                    activity_data["rsv"] = "low"
+                for level in ['very high', 'high', 'moderate', 'low', 'minimal']:
+                    if level in findings_text:
+                        activity_data["rsv"] = level.replace(' ', '_')
+                        break
+        
+        ili_map_pattern = r'ILI:\s*(High|Moderate|Below Baseline)\s+Levels'
+        ili_matches = re.findall(ili_map_pattern, text_content, re.IGNORECASE)
+        if ili_matches and not findings_match:
+            level_map = {"high": "high", "moderate": "moderate", "below baseline": "low"}
+            first_level = ili_matches[0].lower()
+            mapped = level_map.get(first_level, "moderate")
+            activity_data["overall"] = mapped
+            activity_data["influenza"] = mapped
+            logger.info(f"ILI activity from map legend: {mapped}")
+        
+        predominant_match = re.search(r'Predominant virus of the week:\s*(.+)', text_content, re.IGNORECASE)
+        if predominant_match:
+            predominant = predominant_match.group(1).strip()
+            activity_data["predominant_virus"] = predominant
+            logger.info(f"Predominant virus: {predominant}")
         
         return activity_data
     
     def _extract_lab_data(self, text_content: str) -> Dict[str, float]:
-        """Extract laboratory surveillance percentages"""
+        """Extract laboratory surveillance percentages from NREVSS table data"""
         lab_data = {
             "influenza_percent": 2.5,
             "covid19_percent": 2.3,
@@ -275,22 +504,44 @@ class WisconsinDHSScraper:
             "rhinovirus_percent": 12.1
         }
         
-        # Look for percentage patterns in lab data sections
-        percentage_patterns = [
-            (r'Influenza.*?(\d+\.?\d*)%', "influenza_percent"),
-            (r'COVID-19.*?(\d+\.?\d*)%', "covid19_percent"),  
-            (r'Respiratory Syncytial Virus.*?(\d+\.?\d*)%', "rsv_percent"),
-            (r'Rhinovirus/Enterovirus.*?(\d+\.?\d*)%', "rhinovirus_percent")
+        extracted_count = 0
+        
+        table_patterns = [
+            (r'Influenza\s+[\d,]+\s+\d+\s+(\d+\.?\d*)%', "influenza_percent"),
+            (r'COVID-19\s+[\d,]+\s+\d+\s+(\d+\.?\d*)%', "covid19_percent"),
+            (r'Respiratory Syncytial Virus\s+[\d,]+\s+\d+\s+(\d+\.?\d*)%', "rsv_percent"),
+            (r'Rhinovirus/Enterovirus\s+[\d,]+\s+\d+\s+(\d+\.?\d*)%', "rhinovirus_percent"),
         ]
         
-        for pattern, key in percentage_patterns:
+        for pattern, key in table_patterns:
             match = re.search(pattern, text_content, re.IGNORECASE)
             if match:
                 try:
-                    lab_data[key] = float(match.group(1))
+                    val = float(match.group(1))
+                    if 0 <= val <= 100:
+                        lab_data[key] = val
+                        extracted_count += 1
                 except Exception:
                     pass
         
+        if extracted_count == 0:
+            fallback_patterns = [
+                (r'Influenza.*?(\d+\.?\d*)%', "influenza_percent"),
+                (r'COVID-19.*?(\d+\.?\d*)%', "covid19_percent"),
+                (r'Respiratory Syncytial Virus.*?(\d+\.?\d*)%', "rsv_percent"),
+                (r'Rhinovirus/Enterovirus.*?(\d+\.?\d*)%', "rhinovirus_percent")
+            ]
+            for pattern, key in fallback_patterns:
+                match = re.search(pattern, text_content, re.IGNORECASE)
+                if match:
+                    try:
+                        val = float(match.group(1))
+                        if 0 < val <= 100:
+                            lab_data[key] = val
+                    except Exception:
+                        pass
+        
+        logger.info(f"Lab data extracted ({extracted_count} from table): flu={lab_data['influenza_percent']}%, covid={lab_data['covid19_percent']}%, rsv={lab_data['rsv_percent']}%")
         return lab_data
     
     def _extract_ed_data(self, text_content: str) -> Dict[str, Any]:

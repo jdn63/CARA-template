@@ -53,7 +53,7 @@
                         </div>
                         <div class="col-lg-4">
                             <div class="alert alert-secondary mb-0 small">
-                                <strong>Annual Planning Focus:</strong> Acute events shown for context only (0% weight). Strategic decisions based on baseline (60%) and seasonal (25%) patterns.
+                                <strong>Annual Planning Focus:</strong> Trend data derived from NOAA Storm Events, OpenFEMA, climate projections, and Census data. Infectious disease uses WI DHS surveillance for acute scoring instead of trend.
                             </div>
                         </div>
                     </div>
@@ -63,15 +63,16 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Hazard Type</th>
-                                    <th>Baseline (50%)</th>
-                                    <th>Seasonal (20%)</th>
-                                    <th>Trend (20%)</th>
-                                    <th>Acute (10%)</th>
+                                    <th>Baseline (60%)</th>
+                                    <th>Seasonal (25%)</th>
+                                    <th>Trend (15%)</th>
+                                    <th>Acute</th>
                                     <th>Composite Score</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for hazard_type, data in temporal_risk_data.items() %}
+                                {% set is_id = hazard_type == 'infectious_disease' %}
                                 <tr>
                                     <td><strong>{{ hazard_type.replace('_', ' ').title() }}</strong></td>
                                     <td>
@@ -95,7 +96,10 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="progress" style="height: 20px;">
+                                        {% if is_id %}
+                                        <span class="badge bg-secondary" title="Infectious disease uses acute surveillance instead of trend analysis">N/A</span>
+                                        {% else %}
+                                        <div class="progress" style="height: 20px;" {% if data.temporal_components.get('trend_metadata') %}title="{{ data.temporal_components.trend_metadata.data_source }}: {{ data.temporal_components.trend_metadata.description[:120] }}"{% endif %}>
                                             <div class="progress-bar bg-info" role="progressbar" 
                                                 style="width: {{ data.temporal_components.trend * 100 }}%;" 
                                                 aria-valuenow="{{ data.temporal_components.trend * 100 }}" 
@@ -103,8 +107,19 @@
                                                 {{ "%.2f"|format(data.temporal_components.trend) }}
                                             </div>
                                         </div>
+                                        {% endif %}
                                     </td>
                                     <td>
+                                        {% if is_id %}
+                                        <div class="progress" style="height: 20px;" title="WI DHS respiratory surveillance data (15% weight)">
+                                            <div class="progress-bar bg-danger" role="progressbar" 
+                                                style="width: {{ data.temporal_components.acute * 100 }}%;" 
+                                                aria-valuenow="{{ data.temporal_components.acute * 100 }}" 
+                                                aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.2f"|format(data.temporal_components.acute) }} (15%)
+                                            </div>
+                                        </div>
+                                        {% else %}
                                         <div class="progress" style="height: 20px;">
                                             <div class="progress-bar bg-danger" role="progressbar" 
                                                 style="width: {{ data.temporal_components.acute * 100 }}%;" 
@@ -113,6 +128,7 @@
                                                 {{ "%.2f"|format(data.temporal_components.acute) }}
                                             </div>
                                         </div>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <div class="progress" style="height: 20px;">
@@ -159,17 +175,19 @@
                     <div class="mb-3">
                         <span class="text-muted small">Absolute Risk Score:
                         {{ show_work_btn('overall-info', 'Overall Risk Score Calculation',
-                        '<div class="formula-line">Score = PHRAT Quadratic Mean of 5 Domains</div>'
+                        '<div class="formula-line">Score = PHRAT Quadratic Mean of 7 Domains</div>'
                         ~ '<div class="formula-line">= sqrt(Σ(w_i × domain_i²))</div>'
                         ~ '<ul class="component-list">'
-                        ~ '<li>Natural Hazards (33%): ' ~ "%.3f"|format(risk_data.natural_hazards_risk|default(0)) ~ '</li>'
-                        ~ '<li>Health Metrics (20%): ' ~ "%.3f"|format(risk_data.health_risk|default(0)) ~ '</li>'
-                        ~ '<li>Active Shooter (20%): ' ~ "%.3f"|format(risk_data.active_shooter_risk|default(0)) ~ '</li>'
-                        ~ '<li>Extreme Heat (13%): ' ~ "%.3f"|format(risk_data.extreme_heat_risk|default(0)) ~ '</li>'
-                        ~ '<li>Air Quality (14%): ' ~ "%.3f"|format(risk_data.air_quality_risk|default(0)) ~ '</li>'
+                        ~ '<li>Natural Hazards (27%): ' ~ "%.3f"|format(risk_data.natural_hazards_risk|default(0)) ~ '</li>'
+                        ~ '<li>Health Metrics (16%): ' ~ "%.3f"|format(risk_data.health_risk|default(0)) ~ '</li>'
+                        ~ '<li>Active Shooter (16%): ' ~ "%.3f"|format(risk_data.active_shooter_risk|default(0)) ~ '</li>'
+                        ~ '<li>Extreme Heat (11%): ' ~ "%.3f"|format(risk_data.extreme_heat_risk|default(0)) ~ '</li>'
+                        ~ '<li>Air Quality (11%): ' ~ "%.3f"|format(risk_data.air_quality_risk|default(0)) ~ '</li>'
+                        ~ '<li>Dam Failure (8%): ' ~ "%.3f"|format(risk_data.dam_failure_risk|default(0)) ~ '</li>'
+                        ~ '<li>Vector-Borne Disease (6%): ' ~ "%.3f"|format(risk_data.vector_borne_disease_risk|default(0)) ~ '</li>'
                         ~ '</ul>'
                         ~ '<div class="formula-line">= ' ~ "%.3f"|format(risk_data.total_risk_score) ~ '</div>'
-                        ~ '<div class="data-source">5-domain weighted quadratic mean (PHRAT p=2)</div>'
+                        ~ '<div class="data-source">7-domain weighted quadratic mean (PHRAT p=2)</div>'
                         ) }}
                         </span>
                         <div class="display-4 mb-1">{{ "%.2f"|format(risk_data.total_risk_score) }}</div>
@@ -343,7 +361,7 @@
                                         ~ '<li>PM2.5 Baseline: EPA AirNow historical data</li>'
                                         ~ '<li>SVI Adjustment: Housing/socioeconomic vulnerability</li>'
                                         ~ '</ul>'
-                                        ~ '<div class="data-source">Sources: EPA AirNow, NOAA, State DNR, CDC SVI</div>'
+                                        ~ '<div class="data-source">Sources: EPA AirNow, NOAA, Wisconsin DNR, CDC SVI</div>'
                                         ) }}
                                     {% else %}
                                         0.30
@@ -929,7 +947,7 @@
                                         </tr>
                                         {% endif %}
                                         <tr>
-                                            <td>Elderly %</td>
+                                            <td>Population Aged 65+ (%)</td>
                                             <td>{{ fm.elderly_vulnerability_pct|default('N/A', true) }}%</td>
                                         </tr>
                                         {% if fm.data_period is not none %}
@@ -961,7 +979,7 @@
                             </div>
                             <div class="mt-3">
                                 <small class="text-muted">
-                                    Sources: FEMA NRI, State DNR, CDC SVI
+                                    Sources: FEMA NRI, Wisconsin DNR, CDC SVI
                                 </small>
                             </div>
                         </div>
@@ -1115,7 +1133,7 @@
                                         </tr>
                                         {% endif %}
                                         <tr>
-                                            <td>Elderly %</td>
+                                            <td>Population Aged 65+ (%)</td>
                                             <td>{{ wm.elderly_vulnerability_pct|default('N/A', true) }}%</td>
                                         </tr>
                                         {% if wm.data_period is not none %}
@@ -1171,13 +1189,13 @@
                             <h3>{{ "%.2f"|format(risk_data.health_risk) }}
                             {{ show_work_btn('health-info', 'Health Risk Calculation',
                             '<ul class="component-list">'
-                            ~ '<li>Influenza Activity (30%): State health department surveillance</li>'
-                            ~ '<li>COVID-19 Activity (30%): State health department surveillance</li>'
-                            ~ '<li>RSV Activity (20%): State health department surveillance</li>'
+                            ~ '<li>Influenza Activity (30%): Wisconsin DHS surveillance</li>'
+                            ~ '<li>COVID-19 Activity (30%): Wisconsin DHS surveillance</li>'
+                            ~ '<li>RSV Activity (20%): Wisconsin DHS surveillance</li>'
                             ~ '<li>Vaccination Coverage (20%): County Health Rankings</li>'
                             ~ '</ul>'
                             ~ '<div class="formula-line">Score = ' ~ "%.3f"|format(risk_data.health_risk) ~ '</div>'
-                            ~ '<div class="data-source">Sources: State health department surveillance data, County Health Rankings</div>'
+                            ~ '<div class="data-source">Sources: Wisconsin DHS Respiratory Surveillance PDFs (weekly), County Health Rankings</div>'
                             ) }}
                             </h3>
                             <span class="badge bg-{{ 'danger' if risk_data.health_risk > 0.6 else 'warning' if risk_data.health_risk > 0.3 else 'success' }}">
@@ -1264,7 +1282,7 @@
                     </div>
                     <div class="mt-3">
                         <small class="text-muted">
-                            Source: State health department (updated weekly)
+                            Source: Wisconsin Department of Health Services (updated weekly)
                         </small>
                     </div>
                 </div>
@@ -1296,7 +1314,7 @@
                             ~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.extreme_heat_components.resilience) ~ ' (cooling centers, infrastructure)</li>'
                             ~ '</ul>'
                             ~ '<div class="formula-line">+ SVI weighted avg adjustment → ' ~ "%.3f"|format(risk_data.extreme_heat_risk) ~ '</div>'
-                            ~ '<div class="data-source">Sources: NOAA, State HVI, CDC SVI, U.S. Census</div>'
+                            ~ '<div class="data-source">Sources: NOAA, Wisconsin DHS HVI, CDC SVI, U.S. Census</div>'
                             ) }}
                             {% endif %}
                             </h3>
@@ -1404,7 +1422,7 @@
                                     <td>{{ risk_data.extreme_heat_metrics.heat_advisories if risk_data.extreme_heat_metrics.heat_advisories is defined and risk_data.extreme_heat_metrics.heat_advisories is not none and risk_data.extreme_heat_metrics.heat_advisories != "N/A" else "4" }}</td>
                                 </tr>
                                 <tr>
-                                    <td>Elderly Population (%)</td>
+                                    <td>Population Aged 65+ (%)</td>
                                     <td>{{ risk_data.extreme_heat_metrics.elderly_percentage if risk_data.extreme_heat_metrics.elderly_percentage is defined and risk_data.extreme_heat_metrics.elderly_percentage is not none and risk_data.extreme_heat_metrics.elderly_percentage != "N/A" else "13.8" }}%</td>
                                 </tr>
                                 {% else %}
@@ -1421,7 +1439,7 @@
                                     <td>4</td>
                                 </tr>
                                 <tr>
-                                    <td>Elderly Population (%)</td>
+                                    <td>Population Aged 65+ (%)</td>
                                     <td>17.5%</td>
                                 </tr>
                                 {% endif %}
@@ -1431,13 +1449,13 @@
                     <div class="alert alert-info p-2 mt-3">
                         <small>
                             <strong>Note:</strong> 
-                            Risk increases with higher annual heat days, more heat advisories, and higher elderly population percentages.
-                            Elderly residents, outdoor workers, and those without air conditioning are most vulnerable.
+                            Risk increases with higher annual heat days, more heat advisories, and higher percentages of adults aged 65 and older.
+                            Adults aged 65 and older, outdoor workers, and those without air conditioning are most vulnerable.
                         </small>
                     </div>
                     <div class="mt-3">
                         <small class="text-muted">
-                            Sources: NOAA, State DHS, EPA
+                            Sources: NOAA, Wisconsin DHS, EPA
                         </small>
                     </div>
                 </div>
@@ -1695,7 +1713,7 @@
                     </div>
                     <div class="mt-3">
                         <small class="text-muted">
-                            Sources: State public utility commission, FEMA, Historical outage data, Census Bureau
+                            Sources: Wisconsin Public Service Commission, FEMA, Historical outage data, Census Bureau
                         </small>
                     </div>
                 </div>
@@ -1976,6 +1994,321 @@
             </div>
         </div>
         
+        <!-- Dam Failure Risk -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Dam Failure Risk
+                        <span class="badge bg-primary ms-2">
+                            Infrastructure
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if risk_data.dam_failure_risk is defined and risk_data.dam_failure_risk is number %}
+                            <h3>{{ "%.2f"|format(risk_data.dam_failure_risk) }}
+                            {% if risk_data.dam_failure_components is defined %}
+                            {{ show_work_btn('dam-info', 'Dam Failure Risk Calculation',
+                            '<div class="formula-line">Risk = (Exp &times; Vuln) &times; (2.0 - Resil) &times; HIF</div>'
+                            ~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.dam_failure_components.exposure) ~ ' &times; ' ~ "%.3f"|format(risk_data.dam_failure_components.vulnerability) ~ ') &times; (2.0 - ' ~ "%.3f"|format(risk_data.dam_failure_components.resilience) ~ ') &times; ' ~ "%.3f"|format(risk_data.dam_failure_components.health_impact) ~ '</div>'
+                            ~ '<ul class="component-list">'
+                            ~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.dam_failure_components.exposure) ~ ' (dam density, hazard classification, flood zone overlap)</li>'
+                            ~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.dam_failure_components.vulnerability) ~ ' (est. % population in inundation zones, SVI themes)</li>'
+                            ~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.dam_failure_components.resilience) ~ ' (emergency action plans, socioeconomic capacity)</li>'
+                            ~ '<li>Health Impact Factor: ' ~ "%.3f"|format(risk_data.dam_failure_components.health_impact) ~ '</li>'
+                            ~ '</ul>'
+                            ~ '<div class="data-source">Sources: WI DNR Dam Safety Database, USACE NID, OpenFEMA NFIP, CDC SVI, U.S. Census</div>'
+                            ) }}
+                            {% endif %}
+                            </h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.dam_failure_risk > 0.6 else 'warning' if risk_data.dam_failure_risk > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.dam_failure_risk > 0.6 else 'Medium Risk' if risk_data.dam_failure_risk > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% else %}
+                            <h3>0.30</h3>
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if risk_data.dam_failure_components is defined %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">Risk Component Breakdown</h6>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.dam_failure_components.exposure) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-danger" style="width: {{ risk_data.dam_failure_components.exposure * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.dam_failure_components.vulnerability) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-warning" style="width: {{ risk_data.dam_failure_components.vulnerability * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-success mb-1">Resilience</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.dam_failure_components.resilience) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-success" style="width: {{ risk_data.dam_failure_components.resilience * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if risk_data.dam_failure_metrics is defined %}
+                                {% set dfm = risk_data.dam_failure_metrics %}
+                                <tr>
+                                    <td>Total Dams</td>
+                                    <td>{{ dfm.total_dams|default(0) }}</td>
+                                </tr>
+                                <tr>
+                                    <td>High Hazard Dams</td>
+                                    <td><span class="text-danger fw-bold">{{ dfm.high_hazard_dams|default(0) }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Significant Hazard Dams</td>
+                                    <td><span class="text-warning fw-bold">{{ dfm.significant_hazard_dams|default(0) }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Flood Zone Overlap</td>
+                                    <td>{{ dfm.flood_zone_overlap_pct|default(0) }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Emergency Action Plan</td>
+                                    <td>
+                                        {% if dfm.has_emergency_action_plan %}
+                                            <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Est. Population Exposed</td>
+                                    <td>{{ dfm.estimated_pct_population_exposed|default(0) }}%</td>
+                                </tr>
+                                {% if dfm.total_storage_acre_ft is defined and dfm.total_storage_acre_ft %}
+                                <tr>
+                                    <td>Total Storage Capacity</td>
+                                    <td>{{ "{:,.0f}".format(dfm.total_storage_acre_ft) }} acre-ft</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.max_dam_height_ft is defined and dfm.max_dam_height_ft %}
+                                <tr>
+                                    <td>Max Dam Height</td>
+                                    <td>{{ dfm.max_dam_height_ft }} ft</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.eap_count is defined %}
+                                <tr>
+                                    <td>Dams with EAPs</td>
+                                    <td>{{ dfm.eap_count }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.dam_data_source is defined %}
+                                <tr>
+                                    <td>Data Source</td>
+                                    <td><span class="badge bg-info">{{ dfm.dam_data_source }}</span></td>
+                                </tr>
+                                {% endif %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-muted">Data loading...</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-primary p-2 mt-2">
+                        <small>
+                            <strong>Dam Failure Preparedness:</strong> 
+                            <ul class="small mt-2 mb-1">
+                                <li>Review and update dam emergency action plans</li>
+                                <li>Map downstream inundation zones and evacuation routes</li>
+                                <li>Coordinate with Wisconsin DNR Dam Safety Program</li>
+                                <li>Identify vulnerable populations in downstream areas</li>
+                                <li>Conduct dam failure tabletop exercises</li>
+                            </ul>
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: WI DNR Dam Safety Database, USACE NID, OpenFEMA NFIP, CDC SVI, U.S. Census
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Vector-Borne Disease Risk -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Vector-Borne Disease Risk
+                        <span class="badge bg-success ms-2">
+                            Environmental Health
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if risk_data.vector_borne_disease_risk is defined and risk_data.vector_borne_disease_risk is number %}
+                            <h3>{{ "%.2f"|format(risk_data.vector_borne_disease_risk) }}
+                            {% if risk_data.vbd_components is defined %}
+                            {{ show_work_btn('vbd-info', 'Vector-Borne Disease Risk Calculation',
+                            '<div class="formula-line">Risk = (Exp &times; Vuln) &times; (2.0 - Resil) &times; HIF</div>'
+                            ~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.vbd_components.exposure) ~ ' &times; ' ~ "%.3f"|format(risk_data.vbd_components.vulnerability) ~ ') &times; (2.0 - ' ~ "%.3f"|format(risk_data.vbd_components.resilience) ~ ')</div>'
+                            ~ '<ul class="component-list">'
+                            ~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.vbd_components.exposure) ~ ' (case rate history, land cover, climate trend)</li>'
+                            ~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.vbd_components.vulnerability) ~ ' (outdoor workforce, elderly, rural, SVI)</li>'
+                            ~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.vbd_components.resilience) ~ ' (surveillance programs, public awareness)</li>'
+                            ~ '<li>Climate Multiplier: ' ~ "%.2f"|format(risk_data.vbd_components.climate_multiplier|default(1.0)) ~ '</li>'
+                            ~ '<li>Seasonal Factor: ' ~ "%.2f"|format(risk_data.vbd_components.seasonal_factor|default(1.0)) ~ '</li>'
+                            ~ '</ul>'
+                            ~ '<div class="data-source">Sources: WI DHS Tick-Borne Surveillance, CDC ArboNET, USDA NLCD, WI DNR, CDC SVI</div>'
+                            ) }}
+                            {% endif %}
+                            </h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.vector_borne_disease_risk > 0.6 else 'warning' if risk_data.vector_borne_disease_risk > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.vector_borne_disease_risk > 0.6 else 'Medium Risk' if risk_data.vector_borne_disease_risk > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% else %}
+                            <h3>0.30</h3>
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if risk_data.vbd_components is defined %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">Risk Component Breakdown</h6>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.vbd_components.exposure) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-danger" style="width: {{ risk_data.vbd_components.exposure * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.vbd_components.vulnerability) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-warning" style="width: {{ risk_data.vbd_components.vulnerability * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-success mb-1">Resilience</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.vbd_components.resilience) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-success" style="width: {{ risk_data.vbd_components.resilience * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if risk_data.vbd_metrics is defined %}
+                                {% set vbm = risk_data.vbd_metrics %}
+                                <tr>
+                                    <td>Lyme Disease Tier</td>
+                                    <td><span class="badge bg-{{ 'danger' if vbm.lyme_disease_tier == 'very_high' else 'warning' if vbm.lyme_disease_tier == 'high' else 'info' if vbm.lyme_disease_tier == 'moderate' else 'success' }}">{{ vbm.lyme_disease_tier|default('unknown')|replace('_', ' ')|title }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>West Nile Virus Tier</td>
+                                    <td><span class="badge bg-{{ 'danger' if vbm.west_nile_virus_tier == 'high' else 'warning' if vbm.west_nile_virus_tier == 'moderate' else 'success' }}">{{ vbm.west_nile_virus_tier|default('unknown')|replace('_', ' ')|title }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Forest Cover</td>
+                                    <td>{{ vbm.forest_cover_pct|default(0) }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Deer Density</td>
+                                    <td>{{ vbm.deer_density|default('unknown')|replace('_', ' ')|title }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Outdoor Workforce</td>
+                                    <td>{{ vbm.outdoor_workforce_pct|default(0) }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Current Season Risk</td>
+                                    <td><span class="badge bg-{{ 'danger' if vbm.seasonal_risk_level == 'Peak' else 'warning' if vbm.seasonal_risk_level == 'High' else 'info' if vbm.seasonal_risk_level == 'Moderate' else 'success' }}">{{ vbm.seasonal_risk_level|default('Unknown') }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Climate Trend Impact</td>
+                                    <td>{{ vbm.climate_trend_impact|default('N/A') }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Diseases Assessed</td>
+                                    <td><small>{{ vbm.diseases_assessed|default([])|join(', ') }}</small></td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-muted">Data loading...</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-primary p-2 mt-2">
+                        <small>
+                            <strong>Vector-Borne Disease Preparedness:</strong> 
+                            <ul class="small mt-2 mb-1">
+                                <li>Enhance tick and mosquito surveillance programs</li>
+                                <li>Develop public education on tick bite prevention</li>
+                                <li>Coordinate with WI DHS on Lyme disease reporting</li>
+                                <li>Implement integrated pest management strategies</li>
+                                <li>Monitor climate-driven range expansion of vectors</li>
+                            </ul>
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: WI DHS Tick-Borne Surveillance, CDC ArboNET, USDA Forest Service, WI DNR, CDC SVI
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Cybersecurity Risk -->
         <div class="col-md-6">
             <div class="card mb-4">
@@ -2200,9 +2533,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Dashboard Module -->
-<script type="module" src="{{ url_for('static', filename='js/modules/dashboard.js') }}"></script>
-
 <!-- GIS Export Function for Individual Jurisdiction -->
 <script>
 function exportSingleJurisdiction(jurisdictionId) {
@@ -2217,7 +2547,7 @@ function exportSingleJurisdiction(jurisdictionId) {
                 </a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="#" onclick="exportAllJurisdictions(); return false;">
-                    <i class="fas fa-map-marked-alt me-2"></i>Export All Jurisdiction Data
+                    <i class="fas fa-map-marked-alt me-2"></i>Export All Wisconsin Data
                 </a></li>
             </ul>
         </div>
@@ -2236,7 +2566,6 @@ function exportAllJurisdictions() {
 }
 </script>
 
-<!-- Chart.js and Dashboard Scripts -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // DOM loaded - initializing dashboard
@@ -2279,8 +2608,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Setup HERC and WEM modal handlers
 // These functions are called from the map.js when region buttons are clicked
-let currentChart = null;
-
 function showHercStats(regionId) {
     fetch(`/api/herc-region/${regionId}`)
         .then(response => response.json())

@@ -386,7 +386,7 @@ def calculate_winter_storm_risk_with_health_factor(county_name: str) -> dict:
     housing_svi = svi_data.get('housing_transportation', 0.5)
     socioeconomic_svi = svi_data.get('socioeconomic', 0.5)
     
-    # Get elderly population percentage as a key vulnerability factor for winter storms
+    # Get population aged 65+ percentage as a key vulnerability factor for winter storms
     elderly_pct = get_elderly_population_pct(county_name)
     # Normalize to 0-1 range (typical US range is 10-30%)
     elderly_factor = min(1.0, max(0.1, (elderly_pct - 10) / 20.0))

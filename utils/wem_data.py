@@ -1,15 +1,3 @@
-# =============================================================================
-# WISCONSIN-SPECIFIC MODULE
-# =============================================================================
-# This module provides access to Wisconsin Emergency Management (WEM) region data
-# including county mappings and emergency management resource statistics.
-#
-# FOR OTHER JURISDICTIONS: Replace with your emergency management agency's data
-# structure and region definitions, or remove if not applicable.
-#
-# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
-# =============================================================================
-
 """
 WEM (Wisconsin Emergency Management) Data Management Module
 

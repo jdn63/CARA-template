@@ -1,18 +1,3 @@
-# =============================================================================
-# WISCONSIN-SPECIFIC MODULE
-# =============================================================================
-# This module provides functions to fetch public health surveillance data from
-# the Wisconsin Department of Health Services (DHS) API.
-#
-# FOR OTHER JURISDICTIONS: Replace the JURISDICTION_LIST below with your own
-# jurisdiction names. Replace the API calls in get_county_disease_data() and
-# get_vaccination_rate() with calls to your health ministry or public health
-# agency's data system. The functions should return the same dictionary structure
-# so the rest of CARA can use the data without changes.
-#
-# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
-# =============================================================================
-
 """Wisconsin Department of Health Services Data Module
 
 This module provides functions to fetch real public health data from Wisconsin DHS
@@ -43,12 +28,6 @@ DHS_CACHE_PREFIX = "dhs_data_"
 DHS_CACHE_EXPIRY = 7  # 7 days
 
 # Counties in Wisconsin
-# TEMPLATE: Replace with your jurisdiction names
-JURISDICTION_LIST = [
-    # "Example County A", "Example County B", ...
-]
-
-# Original Wisconsin counties (kept as reference, not used):
 WISCONSIN_COUNTIES = [
     "Adams", "Ashland", "Barron", "Bayfield", "Brown", "Buffalo", "Burnett", "Calumet",
     "Chippewa", "Clark", "Columbia", "Crawford", "Dane", "Dodge", "Door", "Douglas",

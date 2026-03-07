@@ -34,13 +34,13 @@
                     <h2 class="h4 mb-0">Overview</h2>
                 </div>
                 <div class="card-body">
-                    <p>CARA is designed to help public health departments, healthcare coalitions, and emergency managers evaluate and respond to a variety of risks across your jurisdiction.</p>
+                    <p>CARA is designed to help public health departments, healthcare coalitions, and emergency managers evaluate and respond to a variety of risks across Wisconsin.</p>
                     
                     <h3 class="h5">What This Tool Does</h3>
                     <p>This tool provides:</p>
                     <ul>
                         <li>Comprehensive risk assessments for natural hazards, health risks, active shooter scenarios, and infrastructure vulnerabilities</li>
-                        <li>Geospatial visualization of risks across all configured jurisdictions</li>
+                        <li>Geospatial visualization of risks across all Wisconsin counties and tribal areas</li>
                         <li>Regional aggregation of data by Healthcare Emergency Readiness Coalition (HERC) regions</li>
                         <li>Printable risk summaries for planning and reporting</li>
                         <li>Compatibility with Kaiser Permanente HVA export for hospital preparedness programs</li>
@@ -78,8 +78,8 @@
                     
                     <h3 class="h5">Health Risks</h3>
                     <ul>
-                        <li>State health department disease surveillance</li>
-                        <li>CDC COVID-19, influenza, and RSV activity reports (via state health department)</li>
+                        <li>Wisconsin Department of Health Services disease surveillance</li>
+                        <li>CDC COVID-19, influenza, and RSV activity reports (via Wisconsin DHS)</li>
                         <li>Respiratory illness surveillance data (Flu, COVID, RSV)</li>
                     </ul>
                     
@@ -96,7 +96,7 @@
                         <li>National Center for Education Statistics School Survey data (SSOCS 2019-2020)</li>
                         <li>EPA AirNow API for air quality monitoring</li>
                         <li>NOAA/NWS heat forecasting data</li>
-                        <li>State Heat Vulnerability Index</li>
+                        <li>Wisconsin DHS Heat Vulnerability Index</li>
                     </ul>
                     
                     <p><strong>Data Refresh Schedule:</strong> Different data sources update at varying frequencies, from daily weather data to annual census information. The tool uses an intelligent caching system to maintain the most recent data while handling API limitations.</p>
@@ -110,7 +110,7 @@
                 <div class="card-body">
                     <h3 class="h5">Accessing Jurisdiction Data</h3>
                     <ol>
-                        <li><strong>Start at the home page:</strong> The interactive map displays risk levels across your jurisdiction.</li>
+                        <li><strong>Start at the home page:</strong> The interactive map displays risk levels across Wisconsin.</li>
                         <li><strong>Select a jurisdiction:</strong> Click on any county or tribal area to view its specific risk profile.</li>
                         <li><strong>Explore the dashboard:</strong> Each jurisdiction dashboard provides detailed breakdowns of various risk factors.</li>
                     </ol>
@@ -158,10 +158,10 @@
                     <h3 class="h5">Temporal Assessment (BSTA Framework)</h3>
                     <p>Risk is evaluated across four timeframes:</p>
                     <ul>
-                        <li><strong>Baseline (50%)</strong> - Long-term risk over 1-10 years</li>
-                        <li><strong>Seasonal (20%)</strong> - Cyclical risk patterns</li>
-                        <li><strong>Trend (20%)</strong> - Emerging patterns over 2-5 years</li>
-                        <li><strong>Acute (10%)</strong> - Immediate threats (days to weeks)</li>
+                        <li><strong>Baseline (60%)</strong> - Long-term risk over 1-10 years</li>
+                        <li><strong>Seasonal (25%)</strong> - Cyclical risk patterns</li>
+                        <li><strong>Trend (15%)</strong> - Real data trends from NOAA Storm Events, OpenFEMA, climate projections, and Census demographics (not applicable to infectious disease)</li>
+                        <li><strong>Acute (0%/15%)</strong> - Context only for most domains; 15% weight for infectious disease using WI DHS surveillance data</li>
                     </ul>
                 </div>
             </div>
@@ -172,7 +172,7 @@
                 </div>
                 <div class="card-body">
                     <h3 class="h5">HERC Region Integration</h3>
-                    <p>The tool integrates regional groupings for a broader view of healthcare preparedness:</p>
+                    <p>The tool integrates Wisconsin's seven Healthcare Emergency Readiness Coalition (HERC) regions for a broader view of healthcare preparedness:</p>
                     <ul>
                         <li>Aggregated risk scores across all counties in each HERC region</li>
                         <li>Regional healthcare capacity data (when available)</li>

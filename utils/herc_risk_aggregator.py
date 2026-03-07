@@ -1,17 +1,3 @@
-# =============================================================================
-# WISCONSIN-SPECIFIC MODULE (Regional/Tribal)
-# =============================================================================
-# This module aggregates risk scores across HERC (Healthcare Emergency Readiness
-# Coalition) regions -- a Wisconsin-specific regional grouping for hospital
-# preparedness planning.
-#
-# FOR OTHER JURISDICTIONS: If you use regional groupings, this module shows how
-# to aggregate jurisdiction-level scores to a regional level. Adapt the region
-# definitions to match your structure.
-#
-# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
-# =============================================================================
-
 """
 HERC Risk Aggregation Module
 
@@ -141,6 +127,8 @@ class HERCRiskAggregator:
             air_quality_scores = []
             cybersecurity_scores = []
             utilities_scores = []
+            dam_failure_scores = []
+            vector_borne_disease_scores = []
             
             # Natural hazard components
             flood_scores = []
@@ -191,6 +179,8 @@ class HERCRiskAggregator:
                     air_quality_scores.append(domain_scores.get('air_quality', 0.0))
                     cybersecurity_scores.append(domain_scores.get('cybersecurity', 0.0))
                     utilities_scores.append(domain_scores.get('utilities', 0.0))
+                    dam_failure_scores.append(domain_scores.get('dam_failure', 0.0))
+                    vector_borne_disease_scores.append(domain_scores.get('vector_borne_disease', 0.0))
                     
                     # Collect natural hazard components
                     natural_hazards_detail = risk_data.get('natural_hazards', {})
@@ -233,6 +223,8 @@ class HERCRiskAggregator:
             air_quality_avg = mean(air_quality_scores) if air_quality_scores else 0.0
             cybersecurity_avg = mean(cybersecurity_scores) if cybersecurity_scores else 0.0
             utilities_avg = mean(utilities_scores) if utilities_scores else 0.0
+            dam_failure_avg = mean(dam_failure_scores) if dam_failure_scores else 0.0
+            vector_borne_disease_avg = mean(vector_borne_disease_scores) if vector_borne_disease_scores else 0.0
             
             # Get weights configuration for total risk calculation
             config_manager = get_config_manager()
@@ -244,7 +236,9 @@ class HERCRiskAggregator:
                 health_avg * weights.get('health_metrics', 0.20) +
                 active_shooter_avg * weights.get('active_shooter', 0.15) +
                 extreme_heat_avg * weights.get('extreme_heat', 0.15) +
-                cybersecurity_avg * weights.get('cybersecurity', 0.15)
+                cybersecurity_avg * weights.get('cybersecurity', 0.15) +
+                dam_failure_avg * weights.get('dam_failure', 0.0) +
+                vector_borne_disease_avg * weights.get('vector_borne_disease', 0.0)
             )
             
             # Calculate aggregated metrics (using mean for averaging)
@@ -266,6 +260,8 @@ class HERCRiskAggregator:
                 'air_quality_risk': air_quality_avg,
                 'cybersecurity_risk': cybersecurity_avg,
                 'utilities_risk': utilities_avg,
+                'dam_failure_risk': dam_failure_avg,
+                'vector_borne_disease_risk': vector_borne_disease_avg,
                 
                 # Natural hazard components
                 'flood_risk': mean(flood_scores) if flood_scores else 0.0,

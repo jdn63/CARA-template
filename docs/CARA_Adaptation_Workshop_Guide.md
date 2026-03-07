@@ -399,7 +399,7 @@ natural_hazards_weights:
 Open `data/census/wisconsin_demographics.csv`. You can open CSV files in any text editor or in a spreadsheet application like Excel or Google Sheets. It looks like this:
 
 ```
-county_name,total_population,population_65_plus,elderly_percentage
+county_name,total_population,population_65_plus,pct_aged_65_plus
 Adams,20654,4131,20.0
 Ashland,15666,3289,21.0
 ```
@@ -407,7 +407,7 @@ Ashland,15666,3289,21.0
 Replace with your jurisdiction data. Keep the same column structure but use your jurisdiction names (must match the `county` field in `jurisdictions_code.py`):
 
 ```
-county_name,total_population,population_65_plus,elderly_percentage
+county_name,total_population,population_65_plus,pct_aged_65_plus
 Tripoli,1158000,92640,8.0
 Benghazi,632000,50560,8.0
 Misrata,462000,36960,8.0

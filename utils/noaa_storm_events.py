@@ -57,7 +57,7 @@ HAZARD_CATEGORIES = {
     "flood": FLOOD_EVENT_TYPES
 }
 
-YEARS_TO_FETCH = 10
+YEARS_TO_FETCH = 20
 
 
 def _parse_damage_value(value: str) -> float:
@@ -147,8 +147,8 @@ def _try_cached_file(local_path: str) -> Optional[List[Dict]]:
             with open(local_path, 'r', encoding='utf-8', errors='replace') as f:
                 reader = csv.DictReader(f)
                 return [row for row in reader if row.get("STATE", "").upper() == "WISCONSIN"]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to read local storm events file {local_path}: {e}")
     return None
 
 
