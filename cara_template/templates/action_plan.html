@@ -1,0 +1,622 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script>
+// Update localStorage with current jurisdiction for navbar display
+document.addEventListener('DOMContentLoaded', function() {
+    const currentJurisdictionId = '{{ risk_data.jurisdiction_id }}';
+    const currentJurisdictionName = '{{ risk_data.location }}';
+    
+    // Update localStorage to reflect current jurisdiction
+    localStorage.setItem('selectedJurisdictionId', currentJurisdictionId);
+    localStorage.setItem('selectedJurisdictionName', currentJurisdictionName);
+    
+    // Update navbar display immediately
+    const jurisdictionDisplay = document.getElementById('jurisdiction-display');
+    if (jurisdictionDisplay) {
+        jurisdictionDisplay.innerHTML = `${currentJurisdictionName}`;
+    }
+});
+</script>
+<div class="container py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Preparedness Action Plan</h2>
+                <div class="btn-group">
+                    <a href="/dashboard/{{ risk_data.jurisdiction_id }}" class="btn btn-outline-primary">
+                        Back to Dashboard
+                    </a>
+                    <a href="/print-summary/{{ risk_data.jurisdiction_id }}" class="btn btn-outline-secondary">
+                        Risk Summary
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted">Generated for: {{ risk_data.location }} on {{ current_date }}</p>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="window.print()">
+                    Print Plan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title">Executive Summary</h3>
+                    <p>Based on the strategic risk assessment for {{ risk_data.location }}, this action plan provides structured guidance for annual preparedness planning. Risk priorities are based on structural baseline factors and seasonal patterns to support long-term capacity building and cyclical preparedness activities. The plan aligns with CDC Public Health Emergency Preparedness (PHEP) capabilities.</p>
+                    
+                    <div class="alert alert-primary small mb-3">
+                        <strong>Planning Mode:</strong> Actions prioritized for annual strategic planning with emphasis on baseline infrastructure (60% weight) and seasonal preparedness cycles (25% weight).
+                    </div>
+
+                    <h4 class="mt-3">Areas Needing Attention</h4>
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Risk Type</th>
+                                <th>Score</th>
+                                <th>Readiness Level</th>
+                                <th>Relative Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hazard, score in top_risks.items() %}
+                            {% if hazard not in excluded_fields %}
+                            <tr>
+                                <td><strong>{{ hazard.replace('_', ' ').title() }}</strong></td>
+                                <td>{{ "%.2f"|format(score) }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if score > 0.6 else 'warning' if score > 0.3 else 'success' }}">
+                                        {{ 'Development Needed' if score > 0.6 else 'Moderate Readiness Level' if score > 0.3 else 'High Readiness Level' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-{{ 'danger' if score > 0.6 else 'warning' if score > 0.3 else 'success' }}" 
+                                             role="progressbar" 
+                                             style="width: {{ (score * 100)|round|int }}%;" 
+                                             aria-valuenow="{{ (score * 100)|round|int }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ (score * 100)|round|int }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <div class="alert alert-info mt-3">
+                        <strong>Readiness Level Guide:</strong> The table above shows your jurisdiction's risk areas ordered by readiness level. The relative impact bars provide a visual indicator of where preparedness development is needed to help focus resource allocation. This comprehensive view includes all identified risks to support more effective planning.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Steps for Each Risk -->
+    {% for hazard, score in top_risks.items() %}
+    {% if hazard not in excluded_fields %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ hazard.replace('_', ' ').title() }}</h4>
+                    <div class="d-flex align-items-center">
+                        <div class="me-2 d-none d-sm-block">
+                            <div class="progress" style="width: 100px; height: 15px;">
+                                <div class="progress-bar bg-{{ 'danger' if score > 0.6 else 'warning' if score > 0.3 else 'success' }}" 
+                                     role="progressbar" 
+                                     style="width: {{ (score * 100)|round|int }}%;" 
+                                     aria-valuenow="{{ (score * 100)|round|int }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                        <span class="badge bg-{{ 'danger' if score > 0.6 else 'warning' if score > 0.3 else 'success' }}">
+                            Readiness: {{ 'Development Needed' if score > 0.6 else 'Moderate Level' if score > 0.3 else 'High Level' }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h5>PHEP Capabilities</h5>
+                            {% if hazard == 'flood' %}
+                            <ul>
+                                <li>Emergency Operations Coordination</li>
+                                <li>Mass Care</li>
+                                <li>Medical Materiel Management and Distribution</li>
+                                <li>Emergency Public Information and Warning</li>
+                            </ul>
+                            {% elif hazard == 'tornado' %}
+                            <ul>
+                                <li>Emergency Operations Coordination</li>
+                                <li>Mass Care</li>
+                                <li>Medical Surge</li>
+                                <li>Fatality Management</li>
+                            </ul>
+                            {% elif hazard == 'winter_storm' %}
+                            <ul>
+                                <li>Emergency Operations Coordination</li>
+                                <li>Mass Care</li>
+                                <li>Medical Materiel Management and Distribution</li>
+                                <li>Emergency Public Information and Warning</li>
+                            </ul>
+                            {% elif hazard == 'active_shooter' %}
+                            <ul>
+                                <li>Emergency Operations Coordination</li>
+                                <li>Medical Surge</li>
+                                <li>Responder Safety and Health</li>
+                                <li>Information Sharing</li>
+                            </ul>
+                            {% elif hazard == 'health' %}
+                            <ul>
+                                <li>Public Health Surveillance and Epidemiological Investigation</li>
+                                <li>Medical Countermeasure Dispensing and Administration</li>
+                                <li>Information Sharing</li>
+                                <li>Emergency Public Information and Warning</li>
+                                <li>Community Preparedness</li>
+                                <li>Medical Surge</li>
+                            </ul>
+                            {% elif hazard == 'cybersecurity' %}
+                            <ul>
+                                <li>Information Sharing (Primary)</li>
+                                <li>Emergency Operations Coordination</li>
+                                <li>Public Health Surveillance and Epidemiological Investigation</li>
+                                <li>Responder Safety and Health</li>
+                                <li>Community Preparedness</li>
+                            </ul>
+                            {% elif hazard == 'extreme_heat' %}
+                            <ul>
+                                <li>Community Preparedness</li>
+                                <li>Mass Care</li>
+                                <li>Medical Surge</li>
+                                <li>Emergency Public Information and Warning</li>
+                            </ul>
+                            {% elif hazard == 'air_quality' %}
+                            <ul>
+                                <li>Emergency Public Information and Warning</li>
+                                <li>Community Preparedness</li>
+                                <li>Medical Surge</li>
+                                <li>Environmental Health</li>
+                            </ul>
+                            {% elif hazard == 'thunderstorm' %}
+                            <ul>
+                                <li>Emergency Operations Coordination</li>
+                                <li>Emergency Public Information and Warning</li>
+                                <li>Medical Surge</li>
+                                <li>Community Preparedness</li>
+                            </ul>
+                            {% elif hazard == 'dam_failure' %}
+                            <ul>
+                                <li>Emergency Operations Coordination</li>
+                                <li>Mass Care</li>
+                                <li>Emergency Public Information and Warning</li>
+                                <li>Community Preparedness</li>
+                            </ul>
+                            {% elif hazard == 'vector_borne_disease' %}
+                            <ul>
+                                <li>Public Health Surveillance and Epidemiological Investigation</li>
+                                <li>Community Preparedness</li>
+                                <li>Emergency Public Information and Warning</li>
+                                <li>Information Sharing</li>
+                            </ul>
+                            {% else %}
+                            <ul>
+                                <li>Emergency Operations Coordination</li>
+                                <li>Community Preparedness</li>
+                                <li>Emergency Public Information and Warning</li>
+                                <li>Medical Surge</li>
+                            </ul>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <h5>Implementation Steps</h5>
+                            <div class="timeline">
+                                {% if hazard == 'flood' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Update flood emergency response plans</li>
+                                        <li>Verify emergency communication systems</li>
+                                        <li>Check medical supply inventory</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Establish evacuation protocols</li>
+                                        <li>Train staff on updated procedures</li>
+                                        <li>Coordinate with local emergency services</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Conduct full-scale evacuation exercise</li>
+                                        <li>Evaluate and enhance partnerships</li>
+                                        <li>Review and update response plans</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'tornado' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Assess shelter accessibility for individuals with functional and access needs</li>
+                                        <li>Develop protocols for emergency dialysis and other critical care needs</li>
+                                        <li>Create inventory of deployable medical surge supplies</li>
+                                        <li>Establish mental health resource coordination system</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Develop hospital evacuation and patient transfer protocols</li>
+                                        <li>Create post-disaster environmental health assessment procedures</li>
+                                        <li>Establish medical countermeasure dispensing plans for tetanus prophylaxis</li>
+                                        <li>Design culturally and linguistically appropriate risk messaging</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Develop fatality management plans with faith-based and cultural considerations</li>
+                                        <li>Create long-term behavioral health recovery framework</li>
+                                        <li>Establish medical record continuity system for displaced populations</li>
+                                        <li>Build public health and healthcare coalition response team</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'winter_storm' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Develop tracking system for at-risk individuals requiring energy assistance</li>
+                                        <li>Create communications strategy for carbon monoxide poisoning prevention</li>
+                                        <li>Establish emergency protocols for medication and medical equipment delivery</li>
+                                        <li>Assess warming center capacity and accessibility for medically vulnerable</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Develop coordination system with home healthcare providers</li>
+                                        <li>Create emergency transportation plan for dialysis and critical care patients</li>
+                                        <li>Establish healthcare coalition resource allocation protocols</li>
+                                        <li>Train community partners on hypothermia recognition and initial treatment</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Develop integrated health and social services resilience plan</li>
+                                        <li>Create emergency pharmaceutical delivery system for chronic disease management</li>
+                                        <li>Implement community paramedic program for winter health needs</li>
+                                        <li>Establish virtual health visit capability for mobility-restricted populations</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'active_shooter' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Conduct public health facility vulnerability assessments</li>
+                                        <li>Update emergency action plans incorporating "Run, Hide, Fight" guidance</li>
+                                        <li>Establish medical triage protocols for mass casualty incidents</li>
+                                        <li>Review emergency communications systems for staff alerts and notifications</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Develop psychological first aid training for public health staff</li>
+                                        <li>Create trauma-informed response protocols with healthcare coalition partners</li>
+                                        <li>Establish family reunification procedures for mass casualty incidents</li>
+                                        <li>Train staff on Stop the Bleed and basic trauma care techniques</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Develop community-based violence prevention programs using public health approach</li>
+                                        <li>Create trauma-informed recovery services for affected communities</li>
+                                        <li>Establish cross-sector partnerships for addressing social determinants of violence</li>
+                                        <li>Implement healthcare and mental health surge capacity protocols for mass violence events</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'health' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Enhance syndromic surveillance systems and reporting mechanisms</li>
+                                        <li>Verify infection control protocols with healthcare coalition partners</li>
+                                        <li>Review medical countermeasure dispensing plans and inventory management systems</li>
+                                        <li>Assess community health needs and identify vulnerable populations with health disparities</li>
+                                        <li>Update health emergency response plans for disease outbreaks</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Establish bidirectional data sharing agreements with healthcare providers</li>
+                                        <li>Develop culturally-appropriate vaccination outreach strategies for priority populations</li>
+                                        <li>Update contact tracing protocols and surge capacity plans</li>
+                                        <li>Train staff on epidemiological investigation techniques and data systems</li>
+                                        <li>Create culturally appropriate health education materials</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Implement community-based participatory approaches to build resilience in vulnerable populations</li>
+                                        <li>Develop scalable disease surveillance and laboratory testing strategies</li>
+                                        <li>Create comprehensive risk communication plan with templates for diverse communities</li>
+                                        <li>Establish cross-sector partnerships for whole community pandemic resilience</li>
+                                        <li>Build community health worker programs in underserved areas</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'cybersecurity' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li><strong>Asset Inventory & Risk Assessment:</strong> Complete comprehensive inventory of all systems, devices, and software with access to PHI or public health data</li>
+                                        <li><strong>Incident Response Plan:</strong> Activate cybersecurity incident response team and verify contact procedures for CISA (1-844-Say-CISA), HHS, and local law enforcement</li>
+                                        <li><strong>Access Control Review:</strong> Implement immediate review of all user accounts, disable dormant accounts, and enforce multi-factor authentication for all critical systems</li>
+                                        <li><strong>Business Continuity:</strong> Test offline backup procedures for surveillance systems (NNDSS, NSSP), electronic laboratory reporting (ELR), and electronic death records (EDR)</li>
+                                        <li><strong>HIPAA Security Assessment:</strong> Conduct rapid assessment of PHI protection measures including encryption at rest and in transit</li>
+                                        <li><strong>Staff Notification:</strong> Brief all staff on cybersecurity incident reporting procedures and current threat landscape</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li><strong>NIST Framework Implementation:</strong> Begin implementing NIST Cybersecurity Framework in compliance with CDC Additional Requirement 39</li>
+                                        <li><strong>Surveillance System Contingencies:</strong> Develop manual reporting procedures for critical surveillance functions when electronic systems are compromised</li>
+                                        <li><strong>Security Training Program:</strong> Implement quarterly cybersecurity awareness training including phishing simulation exercises for all staff</li>
+                                        <li><strong>Network Segmentation:</strong> Isolate public health surveillance systems from general administrative networks to limit breach impact</li>
+                                        <li><strong>Vendor Security Assessment:</strong> Review all business associate agreements and third-party vendor cybersecurity practices</li>
+                                        <li><strong>Data Loss Prevention:</strong> Implement automated backup systems with offline storage and quarterly backup testing procedures</li>
+                                        <li><strong>Vulnerability Management:</strong> Establish monthly vulnerability scanning and patch management procedures for all systems</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li><strong>Information Sharing Architecture:</strong> Develop secure data exchange infrastructure with healthcare coalition partners, laboratories, and state/tribal health agencies</li>
+                                        <li><strong>Threat Intelligence Program:</strong> Establish participation in health sector threat intelligence sharing networks and implement automated threat detection</li>
+                                        <li><strong>Zero Trust Implementation:</strong> Implement zero trust network architecture for public health informatics systems and remote access</li>
+                                        <li><strong>Cybersecurity Mutual Aid:</strong> Establish formal cybersecurity mutual aid agreements with regional health departments and state agencies</li>
+                                        <li><strong>Advanced Monitoring:</strong> Deploy 24/7 security operations center (SOC) capabilities or managed security services for continuous monitoring</li>
+                                        <li><strong>Compliance Program:</strong> Develop comprehensive HIPAA Security Rule compliance program incorporating 2025 regulatory updates</li>
+                                        <li><strong>Resilience Testing:</strong> Conduct annual tabletop exercises and penetration testing to validate cybersecurity preparedness</li>
+                                        <li><strong>Public Health Informatics Enhancement:</strong> Strengthen public health surveillance and informatics capabilities to support PHEP Capability 6 objectives</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'extreme_heat' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Map high-risk areas and populations using GIS and social vulnerability indices</li>
+                                        <li>Develop a heat response plan with criteria for activation and deactivation</li>
+                                        <li>Establish a health surveillance system to monitor heat-related illness</li>
+                                        <li>Assess cooling center accessibility for mobility-impaired and transportation-dependent populations</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Develop multilingual heat health communication materials for diverse communities</li>
+                                        <li>Create coordinated outreach systems for adults aged 65 and older, persons with disabilities, and socially isolated residents</li>
+                                        <li>Train healthcare providers on recognition and treatment of heat-related illnesses</li>
+                                        <li>Establish data sharing protocols with emergency departments for syndromic surveillance</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Develop a heat vulnerability reduction strategy with community partners</li>
+                                        <li>Create health equity initiatives to address disproportionate heat impacts</li>
+                                        <li>Establish cooling center networks integrated with public transportation systems</li>
+                                        <li>Implement community health worker programs in high-risk neighborhoods</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'air_quality' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Establish early warning systems linked to Canadian wildfire forecasts</li>
+                                        <li>Create wildfire smoke health protocols for vulnerable populations</li>
+                                        <li>Develop clean air shelter network with enhanced filtration systems</li>
+                                        <li>Train staff on extended-duration air quality events and communication</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (30-90 days)</h6>
+                                    <ul>
+                                        <li>Partner with schools and healthcare facilities to implement wildfire smoke preparedness</li>
+                                        <li>Develop public messaging templates for different wildfire smoke intensity levels</li>
+                                        <li>Create indoor air quality guidance focusing on filtration during smoke events</li>
+                                        <li>Establish agreements with facilities that can serve as long-term clean air shelters</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-6 months)</h6>
+                                    <ul>
+                                        <li>Integrate Canadian wildfire smoke forecasts into all emergency response plans</li>
+                                        <li>Conduct community education on wildfire smoke health impacts and extended episodes</li>
+                                        <li>Evaluate and improve air filtration in critical facilities for multi-day smoke events</li>
+                                        <li>Develop partnerships with Canadian fire agencies and environmental health agencies</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'thunderstorm' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Develop health alert protocols for power-dependent medical equipment users</li>
+                                        <li>Map vulnerable populations with limited mobility or healthcare access</li>
+                                        <li>Assess water-borne disease risks from potential flood contamination</li>
+                                        <li>Review hospital surge capacity for storm-related injuries and medical emergencies</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Develop public health messaging for pre-storm medication management</li>
+                                        <li>Create healthcare coalition communication protocols for patient distribution</li>
+                                        <li>Establish environmental health monitoring procedures for post-storm water quality</li>
+                                        <li>Train medical staff on lightning strike and flood-related injury management</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Develop psychosocial support services for storm-affected communities</li>
+                                        <li>Build cross-sector partnerships between public health and emergency management</li>
+                                        <li>Create healthcare facility resilience plans for recurrent severe weather events</li>
+                                        <li>Implement targeted outreach for medically vulnerable populations</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'dam_failure' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Review dam emergency action plans and verify notification procedures</li>
+                                        <li>Map downstream inundation zones and identify vulnerable populations</li>
+                                        <li>Verify emergency communication systems for dam failure alerts</li>
+                                        <li>Assess medical supply inventory for potential mass evacuation</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Establish evacuation protocols for downstream communities</li>
+                                        <li>Coordinate with Wisconsin DNR Dam Safety Program on inspection schedules</li>
+                                        <li>Develop public health response plans for water contamination post-dam failure</li>
+                                        <li>Train staff on dam failure notification and mass care procedures</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Conduct dam failure tabletop exercises with downstream communities</li>
+                                        <li>Develop long-term recovery plans for dam failure scenarios</li>
+                                        <li>Establish cross-jurisdictional agreements for mutual aid during dam emergencies</li>
+                                        <li>Assess infrastructure vulnerability and advocate for dam safety improvements</li>
+                                    </ul>
+                                </div>
+                                {% elif hazard == 'vector_borne_disease' %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Review current tick and mosquito surveillance data and reporting systems</li>
+                                        <li>Develop seasonal public education materials on tick bite prevention</li>
+                                        <li>Identify high-risk outdoor recreation and occupational areas</li>
+                                        <li>Establish clinical guidance for healthcare providers on Lyme disease diagnosis</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Implement integrated pest management strategies for vector control</li>
+                                        <li>Coordinate with WI DHS on enhanced Lyme disease case reporting</li>
+                                        <li>Develop targeted outreach for outdoor workers, hunters, and rural communities</li>
+                                        <li>Train healthcare providers on recognition of anaplasmosis and ehrlichiosis</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Establish ongoing vector surveillance monitoring with habitat assessment</li>
+                                        <li>Develop climate adaptation plans for expanding tick and mosquito ranges</li>
+                                        <li>Build partnerships with wildlife management agencies for deer population monitoring</li>
+                                        <li>Create community-based prevention programs for high-incidence areas</li>
+                                    </ul>
+                                </div>
+                                {% else %}
+                                <div class="timeline-item">
+                                    <h6>Immediate (0-30 days)</h6>
+                                    <ul>
+                                        <li>Conduct initial risk assessment and identify priority areas</li>
+                                        <li>Review existing emergency response plans and protocols</li>
+                                        <li>Establish communication channels with relevant partners</li>
+                                        <li>Identify vulnerable populations and critical infrastructure</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Short-term (1-3 months)</h6>
+                                    <ul>
+                                        <li>Develop targeted preparedness plans based on risk assessment findings</li>
+                                        <li>Train staff on updated procedures and response protocols</li>
+                                        <li>Establish data sharing agreements with key partners</li>
+                                        <li>Create public communication materials for at-risk communities</li>
+                                    </ul>
+                                </div>
+                                <div class="timeline-item">
+                                    <h6>Long-term (3-12 months)</h6>
+                                    <ul>
+                                        <li>Implement comprehensive preparedness improvement plans</li>
+                                        <li>Conduct tabletop exercises to validate response capabilities</li>
+                                        <li>Build cross-sector partnerships for community resilience</li>
+                                        <li>Evaluate and refine response plans based on exercise outcomes</li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    
+    <!-- Footer with Version Information -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning mt-2 small">
+                This action plan was generated using CARA (Comprehensive Automated Risk Assessment) <strong>v2.1</strong>, developed as a research project at Georgetown University in collaboration with Wisconsin health departments. While it uses official data sources, users should verify critical information with their authoritative sources when making major decisions.
+                <div class="mt-2">
+                    <strong>Research Tool Notice:</strong> This platform is designed for strategic planning support and educational purposes. All recommendations should be validated through established emergency management protocols and local expertise before implementation.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-item {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-left: 3px solid var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.timeline-item h6 {
+    color: var(--bs-primary);
+    margin-bottom: 10px;
+}
+
+@media print {
+    .btn-group {
+        display: none !important;
+    }
+
+    .timeline-item {
+        break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}

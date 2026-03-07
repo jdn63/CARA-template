@@ -1,0 +1,42 @@
+{
+  "dane": {
+    "overall": 0.35,
+    "socioeconomic": 0.3,
+    "household_composition": 0.4,
+    "minority_status": 0.5,
+    "housing_transportation": 0.2,
+    "last_updated": "2025-05-05T18:09:13.026775"
+  },
+  "milwaukee": {
+    "overall": 0.75,
+    "socioeconomic": 0.8,
+    "household_composition": 0.7,
+    "minority_status": 0.8,
+    "housing_transportation": 0.7,
+    "last_updated": "2025-05-05T18:09:13.026785"
+  },
+  "waukesha": {
+    "overall": 0.2,
+    "socioeconomic": 0.15,
+    "household_composition": 0.3,
+    "minority_status": 0.25,
+    "housing_transportation": 0.2,
+    "last_updated": "2025-05-05T18:09:13.026788"
+  },
+  "brown": {
+    "overall": 0.4,
+    "socioeconomic": 0.45,
+    "household_composition": 0.35,
+    "minority_status": 0.5,
+    "housing_transportation": 0.35,
+    "last_updated": "2025-05-05T18:09:13.026791"
+  },
+  "state_average": {
+    "overall": 0.5,
+    "socioeconomic": 0.5,
+    "household_composition": 0.5,
+    "minority_status": 0.5,
+    "housing_transportation": 0.5,
+    "last_updated": "2025-05-05T18:09:13.026794"
+  }
+}

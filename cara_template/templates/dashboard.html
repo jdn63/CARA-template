@@ -1,0 +1,2700 @@
+{% extends "base.html" %}
+{% from 'components/info_popover.html' import show_work_btn %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h2>Risk Analysis Dashboard</h2>
+                <p class="text-muted">Public Health analysis for {{ risk_data.location }}</p>
+
+                <a href="/methodology" class="btn btn-sm btn-outline-info" target="_blank">
+                    View Risk Assessment Methodology
+                </a>
+                <a href="/print-summary/{{ risk_data.jurisdiction_id }}" class="btn btn-sm btn-outline-secondary ms-2" target="_blank">
+                    Print Risk Summary
+                </a>
+                <a href="/action-plan/{{ risk_data.jurisdiction_id }}" class="btn btn-sm btn-outline-primary ms-2" target="_blank">
+                    Generate Action Plan
+                </a>
+                <button class="btn btn-sm btn-outline-success ms-2" onclick="exportSingleJurisdiction('{{ risk_data.jurisdiction_id }}')">
+                    <i class="fas fa-download me-1"></i>Export GIS Data
+                </button>
+                <a href="/kp-hva-export/{{ risk_data.jurisdiction_id }}" class="btn btn-sm btn-outline-warning ms-2">
+                    <i class="fas fa-file-excel me-1"></i>Export KP HVA
+                </a>
+
+            </div>
+            <div>
+                <a href="/" class="btn btn-outline-secondary">
+                    Back to Jurisdictions
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Temporal Risk Components Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Temporal Risk Analysis (BSTA Framework)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <p>
+                                Our <strong>Baseline-Seasonal-Trend-Acute (BSTA)</strong> framework breaks down risks into temporal components for strategic preparedness planning.
+                                <a href="/methodology" class="small" target="_blank">Learn about the BSTA framework</a>
+                            </p>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="alert alert-secondary mb-0 small">
+                                <strong>Annual Planning Focus:</strong> Trend data derived from NOAA Storm Events, OpenFEMA, climate projections, and Census data. Infectious disease uses WI DHS surveillance for acute scoring instead of trend.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Hazard Type</th>
+                                    <th>Baseline (60%)</th>
+                                    <th>Seasonal (25%)</th>
+                                    <th>Trend (15%)</th>
+                                    <th>Acute</th>
+                                    <th>Composite Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for hazard_type, data in temporal_risk_data.items() %}
+                                {% set is_id = hazard_type == 'infectious_disease' %}
+                                <tr>
+                                    <td><strong>{{ hazard_type.replace('_', ' ').title() }}</strong></td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" 
+                                                style="width: {{ data.temporal_components.baseline * 100 }}%;" 
+                                                aria-valuenow="{{ data.temporal_components.baseline * 100 }}" 
+                                                aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.2f"|format(data.temporal_components.baseline) }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" 
+                                                style="width: {{ data.temporal_components.seasonal * 100 }}%;" 
+                                                aria-valuenow="{{ data.temporal_components.seasonal * 100 }}" 
+                                                aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.2f"|format(data.temporal_components.seasonal) }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if is_id %}
+                                        <span class="badge bg-secondary" title="Infectious disease uses acute surveillance instead of trend analysis">N/A</span>
+                                        {% else %}
+                                        <div class="progress" style="height: 20px;" {% if data.temporal_components.get('trend_metadata') %}title="{{ data.temporal_components.trend_metadata.data_source }}: {{ data.temporal_components.trend_metadata.description[:120] }}"{% endif %}>
+                                            <div class="progress-bar bg-info" role="progressbar" 
+                                                style="width: {{ data.temporal_components.trend * 100 }}%;" 
+                                                aria-valuenow="{{ data.temporal_components.trend * 100 }}" 
+                                                aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.2f"|format(data.temporal_components.trend) }}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if is_id %}
+                                        <div class="progress" style="height: 20px;" title="WI DHS respiratory surveillance data (15% weight)">
+                                            <div class="progress-bar bg-danger" role="progressbar" 
+                                                style="width: {{ data.temporal_components.acute * 100 }}%;" 
+                                                aria-valuenow="{{ data.temporal_components.acute * 100 }}" 
+                                                aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.2f"|format(data.temporal_components.acute) }} (15%)
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" 
+                                                style="width: {{ data.temporal_components.acute * 100 }}%;" 
+                                                aria-valuenow="{{ data.temporal_components.acute * 100 }}" 
+                                                aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.2f"|format(data.temporal_components.acute) }}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar 
+                                                {% if data.composite_score < 0.3 %}bg-success{% endif %}
+                                                {% if data.composite_score >= 0.3 and data.composite_score < 0.6 %}bg-warning{% endif %}
+                                                {% if data.composite_score >= 0.6 %}bg-danger{% endif %}" 
+                                                role="progressbar" 
+                                                style="width: {{ data.composite_score * 100 }}%;" 
+                                                aria-valuenow="{{ data.composite_score * 100 }}" 
+                                                aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.2f"|format(data.composite_score) }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>How to use this analysis:</strong> Focus interventions based on temporal components:
+                        <ul class="mb-0">
+                            <li><strong>High Baseline:</strong> Long-term infrastructure and capacity building</li>
+                            <li><strong>High Seasonal:</strong> Prepare for predictable seasonal patterns (current season: {{ current_season }})</li>
+                            <li><strong>High Trend:</strong> Strategic planning for emerging risks</li>
+                            <li><strong>High Acute:</strong> Immediate attention and response required</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Score Overview -->
+    <div class="row mb-4">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Overall Risk Assessment</h5>
+                    
+                    <!-- Absolute Risk Score -->
+                    <div class="mb-3">
+                        <span class="text-muted small">Absolute Risk Score:
+                        {{ show_work_btn('overall-info', 'Overall Risk Score Calculation',
+                        '<div class="formula-line">Score = PHRAT Quadratic Mean of 7 Domains</div>'
+                        ~ '<div class="formula-line">= sqrt(Σ(w_i × domain_i²))</div>'
+                        ~ '<ul class="component-list">'
+                        ~ '<li>Natural Hazards (27%): ' ~ "%.3f"|format(risk_data.natural_hazards_risk|default(0)) ~ '</li>'
+                        ~ '<li>Health Metrics (16%): ' ~ "%.3f"|format(risk_data.health_risk|default(0)) ~ '</li>'
+                        ~ '<li>Active Shooter (16%): ' ~ "%.3f"|format(risk_data.active_shooter_risk|default(0)) ~ '</li>'
+                        ~ '<li>Extreme Heat (11%): ' ~ "%.3f"|format(risk_data.extreme_heat_risk|default(0)) ~ '</li>'
+                        ~ '<li>Air Quality (11%): ' ~ "%.3f"|format(risk_data.air_quality_risk|default(0)) ~ '</li>'
+                        ~ '<li>Dam Failure (8%): ' ~ "%.3f"|format(risk_data.dam_failure_risk|default(0)) ~ '</li>'
+                        ~ '<li>Vector-Borne Disease (6%): ' ~ "%.3f"|format(risk_data.vector_borne_disease_risk|default(0)) ~ '</li>'
+                        ~ '</ul>'
+                        ~ '<div class="formula-line">= ' ~ "%.3f"|format(risk_data.total_risk_score) ~ '</div>'
+                        ~ '<div class="data-source">7-domain weighted quadratic mean (PHRAT p=2)</div>'
+                        ) }}
+                        </span>
+                        <div class="display-4 mb-1">{{ "%.2f"|format(risk_data.total_risk_score) }}</div>
+                        <div class="badge bg-{{ 'danger' if risk_data.total_risk_score > 0.6 else 'warning' if risk_data.total_risk_score > 0.3 else 'success' }} mb-3">
+                            {{ 'High Risk' if risk_data.total_risk_score > 0.6 else 'Medium Risk' if risk_data.total_risk_score > 0.3 else 'Low Risk' }}
+                        </div>
+                    </div>
+                    
+                    <!-- Percentile Rank section removed as requested -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {% if risk_data.score_provenance is defined %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center" 
+                     data-bs-toggle="collapse" data-bs-target="#scoreProvenance" 
+                     role="button" aria-expanded="false" aria-controls="scoreProvenance"
+                     style="cursor: pointer;">
+                    <h5 class="mb-0"><i class="fas fa-search-plus me-2"></i>Score Provenance Trace</h5>
+                    <span class="badge bg-secondary">Click to expand full calculation chain</span>
+                </div>
+                <div class="collapse" id="scoreProvenance">
+                    <div class="card-body">
+                        <div class="alert alert-info py-2">
+                            <strong>End-to-end calculation trace</strong> from source data through every transformation to the final score. Intended for analysts and external reviewers verifying score reproducibility.
+                        </div>
+
+                        <h6>Final Score Verification</h6>
+                        <div class="bg-light p-3 rounded mb-3 font-monospace small">
+                            <div><strong>Formula:</strong> {{ risk_data.score_provenance.formula }}</div>
+                            <div><strong>Manual check:</strong> {{ risk_data.score_provenance.verification.manual_check }}</div>
+                            <div><strong>Weights sum:</strong> {{ risk_data.score_provenance.verification.weights_sum }}</div>
+                            <div><strong>Weighted sum (Σ wᵢ×Riskᵢ²):</strong> {{ risk_data.score_provenance.weighted_sum }}</div>
+                            <div><strong>Final score (√weighted_sum):</strong> {{ risk_data.score_provenance.total_risk_score }}</div>
+                        </div>
+
+                        <h6>Primary Domain Breakdown</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Domain</th>
+                                        <th>Weight</th>
+                                        <th>Pre-SVI Score</th>
+                                        <th>Final Score</th>
+                                        <th>w×Score²</th>
+                                        <th>SVI Adjustment</th>
+                                        <th>Aggregation Method</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for domain in risk_data.score_provenance.domains %}
+                                    <tr>
+                                        <td><strong>{{ domain.name }}</strong></td>
+                                        <td>{{ "%.0f"|format(domain.weight * 100) }}%</td>
+                                        <td>{{ "%.4f"|format(domain.pre_svi_score) if domain.pre_svi_score is defined else '—' }}</td>
+                                        <td><strong>{{ "%.4f"|format(domain.final_score) }}</strong></td>
+                                        <td>{{ "%.4f"|format(domain.weighted_contribution) }}</td>
+                                        <td class="small">{{ domain.svi_adjustment }}</td>
+                                        <td class="small">{{ domain.aggregation if domain.aggregation is defined else '—' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% for domain in risk_data.score_provenance.domains %}
+                        {% if domain.sub_components is defined and domain.sub_components %}
+                        <div class="mb-2">
+                            <strong class="small">{{ domain.name }} sub-components:</strong>
+                            <span class="font-monospace small">
+                                {% for k, v in domain.sub_components.items() %}
+                                {{ k }}={{ v }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+
+                        <h6 class="mt-3">Data Sources per Domain</h6>
+                        <div class="row">
+                            {% for domain in risk_data.score_provenance.domains %}
+                            <div class="col-md-6 col-lg-4 mb-2">
+                                <div class="border rounded p-2 h-100">
+                                    <strong class="small">{{ domain.name }}</strong>
+                                    <ul class="mb-0 small" style="padding-left: 1.2em;">
+                                        {% for src in domain.data_sources %}
+                                        <li>{{ src }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <h6 class="mt-3">SVI Theme Values Used</h6>
+                        <div class="font-monospace small bg-light p-2 rounded">
+                            {% for theme, value in risk_data.score_provenance.svi_themes_used.items() %}
+                            {{ theme }}: {{ value }}{% if not loop.last %} | {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        {% if risk_data.score_provenance.supplementary_domains %}
+                        <h6 class="mt-3">Supplementary Domains (not in PHRAT score)</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Domain</th>
+                                        <th>Pre-SVI Score</th>
+                                        <th>Final Score</th>
+                                        <th>SVI Adjustment</th>
+                                        <th>Data Sources</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for domain in risk_data.score_provenance.supplementary_domains %}
+                                    <tr>
+                                        <td><strong>{{ domain.name }}</strong></td>
+                                        <td>{{ "%.4f"|format(domain.pre_svi_score) if domain.pre_svi_score is defined else '—' }}</td>
+                                        <td>{{ "%.4f"|format(domain.final_score) }}</td>
+                                        <td class="small">
+                                            {{ domain.svi_adjustment if domain.svi_adjustment is defined else '—' }}
+                                            {% if domain.svi_bias_warning is defined %}
+                                            <br><span class="text-danger"><i class="fas fa-exclamation-triangle"></i> {{ domain.svi_bias_warning }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="small">{{ domain.data_sources | join(', ') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Strategic Air Quality Risk Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Strategic Air Quality Risk Assessment
+                        <span class="badge bg-info ms-2">
+                            Long-term Planning
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="mb-1">
+                                    {% if risk_data.air_quality_risk is defined and risk_data.air_quality_risk is number %}
+                                        {{ "%.2f"|format(risk_data.air_quality_risk) }}
+                                        {{ show_work_btn('aq-info', 'Air Quality Risk Calculation',
+                                        '<ul class="component-list">'
+                                        ~ '<li>Ozone Trend: Projected +40% by 2050 (EPA/NOAA)</li>'
+                                        ~ '<li>Wildfire Smoke: +150% episodes since 2019</li>'
+                                        ~ '<li>PM2.5 Baseline: EPA AirNow historical data</li>'
+                                        ~ '<li>SVI Adjustment: Housing/socioeconomic vulnerability</li>'
+                                        ~ '</ul>'
+                                        ~ '<div class="data-source">Sources: EPA AirNow, NOAA, Wisconsin DNR, CDC SVI</div>'
+                                        ) }}
+                                    {% else %}
+                                        0.30
+                                    {% endif %}
+                                </h3>
+                                <span class="badge bg-{{ 'danger' if risk_data.air_quality_risk > 0.6 else 'warning' if risk_data.air_quality_risk > 0.3 else 'success' }}">
+                                    {{ 'High Risk' if risk_data.air_quality_risk > 0.6 else 'Medium Risk' if risk_data.air_quality_risk > 0.3 else 'Low Risk' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <!-- Strategic Air Quality Assessment Display -->
+                            {% if risk_data.air_quality_components is defined %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <h6 class="text-muted mb-2">Canadian Wildfire Smoke Trends</h6>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Historical Increase (2019-2024):</span>
+                                                <span class="badge bg-warning">+150% episodes</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Episode Duration:</span>
+                                                <span class="badge bg-info">4.1 days avg</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Projected by 2040:</span>
+                                                <span class="badge bg-danger">+110% episodes</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- Strategic Planning Guidance -->
+                                        <div class="alert alert-warning p-2 mb-0">
+                                            <small>
+                                                <strong>Strategic Planning Focus:</strong> 
+                                                Canadian wildfire smoke episodes now occur 2.5x more frequently than historical baseline (2010-2018). 
+                                                Peak season has extended from July-August to May-September. 
+                                                Priority: Establish early warning systems and clean air shelter networks.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: EPA AirNow API, CDC Social Vulnerability Index
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Removed Future Risk Trends & Predictive Analysis section as requested -->
+    <!-- Removed Comprehensive Risk Analysis section as requested -->
+
+    <!-- Tornado Risk Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Tornado Risk Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Risk Score -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between">
+                            <h6>Overall Risk Score:
+{% if risk_data.tornado_components is defined %}
+{{ show_work_btn('tornado-info', 'Tornado Risk Calculation',
+'<div class="formula-line">Risk = (Exp × Vuln) × (2.0 - Resil) × HIF</div>'
+~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.tornado_components.exposure) ~ ' × ' ~ "%.3f"|format(risk_data.tornado_components.vulnerability) ~ ') × (2.0 - ' ~ "%.3f"|format(risk_data.tornado_components.resilience) ~ ') × ' ~ "%.3f"|format(risk_data.tornado_components.health_impact) ~ '</div>'
+~ '<div class="formula-line">= ' ~ "%.3f"|format(risk_data.tornado_risk) ~ '</div>'
+~ '<ul class="component-list">'
+~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.tornado_components.exposure) ~ ' (FEMA NRI × ' ~ "%.2f"|format(risk_data.tornado_components.climate_multiplier) ~ ' climate adj.)</li>'
+~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.tornado_components.vulnerability) ~ ' (4 SVI themes + Census demographics)</li>'
+~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.tornado_components.resilience) ~ ' (socioeconomic + infrastructure capacity)</li>'
+~ '<li>Health Impact Factor: ' ~ "%.3f"|format(risk_data.tornado_components.health_impact) ~ ' (FEMA NRI population loss data)</li>'
+~ '</ul>'
+~ '<div class="data-source">Sources: FEMA NRI, NOAA Storm Events, OpenFEMA Declarations, CDC SVI, U.S. Census</div>'
+) }}
+{% endif %}
+</h6>
+                            <h6 class="fw-bold text-{{ 'danger' if risk_data.tornado_risk > 0.6 else 'warning' if risk_data.tornado_risk > 0.3 else 'success' }}">
+                                {{ "%.2f"|format(risk_data.tornado_risk) }}
+                                
+                                <!-- Percentile display removed -->
+                            </h6>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-{{ 'danger' if risk_data.tornado_risk > 0.6 else 'warning' if risk_data.tornado_risk > 0.3 else 'success' }}" 
+                                 role="progressbar" 
+                                 style="width: {{ risk_data.tornado_risk * 100 }}%" 
+                                 aria-valuenow="{{ risk_data.tornado_risk * 100 }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk Components -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Risk Components</h6>
+                        <div class="row g-2">
+                            {% if risk_data.tornado_components is defined %}
+                                <!-- Exposure Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.tornado_components.exposure) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: {{ risk_data.tornado_components.exposure * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Vulnerability Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.tornado_components.vulnerability) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: {{ risk_data.tornado_components.vulnerability * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Resilience Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.tornado_components.resilience) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: {{ risk_data.tornado_components.resilience * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Fallback display -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">0.62</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: 62%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">0.55</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: 55%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">0.45</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: 45%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Key Metrics Table -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Key Metrics</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if risk_data.tornado_metrics is defined %}
+                                        {% set tm = risk_data.tornado_metrics %}
+                                        <tr>
+                                            <td>Tornado Events (NOAA)</td>
+                                            <td>{% if tm.historical_tornado_events is not none %}{{ tm.historical_tornado_events }}{% else %}Pending{% endif %}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Average EF Rating</td>
+                                            <td>{% if tm.average_ef_rating is not none %}EF-{{ tm.average_ef_rating }}{% else %}N/A{% endif %}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Property Damage</td>
+                                            <td>{% if tm.tornado_property_damage is not none %}{{ tm.tornado_property_damage }}{% else %}Pending{% endif %}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Injuries / Fatalities</td>
+                                            <td>{{ tm.tornado_injuries|default(0, true) }} / {{ tm.tornado_fatalities|default(0, true) }}</td>
+                                        </tr>
+                                        {% if tm.federal_tornado_declarations is not none %}
+                                        <tr>
+                                            <td>Federal Declarations (FEMA)</td>
+                                            <td>{{ tm.federal_tornado_declarations }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        <tr>
+                                            <td>Mobile Home %</td>
+                                            <td>{{ tm.mobile_home_vulnerability_pct|default('N/A', true) }}%</td>
+                                        </tr>
+                                        {% if tm.data_period is not none %}
+                                        <tr>
+                                            <td colspan="2"><small class="text-muted">Data period: {{ tm.data_period }}</small></td>
+                                        </tr>
+                                        {% endif %}
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="2" class="text-muted">Data loading...</td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-primary p-2 mt-2">
+                                <small>
+                                    <strong>Tornado Preparedness Recommendations:</strong> 
+                                    <ul class="small mt-2 mb-1">
+                                        <li>Establish community storm shelters in high-risk areas</li>
+                                        <li>Enhance early warning systems and public notification</li>
+                                        <li>Conduct regular tornado drills in schools and businesses</li>
+                                        <li>Reinforce building codes for structures in high-risk zones</li>
+                                        <li>Educate residents on emergency protocols and safe rooms</li>
+                                    </ul>
+                                </small>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    Sources: FEMA NRI, NWS Storm Data, CDC SVI
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thunderstorm Risk Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Thunderstorm Risk Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Risk Score -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between">
+                            <h6>Overall Risk Score:
+{% if risk_data.thunderstorm_components is defined %}
+{{ show_work_btn('thunderstorm-info', 'Thunderstorm Risk Calculation',
+'<div class="formula-line">Risk = (Exp × Vuln) × (2.0 - Resil) × HIF</div>'
+~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.thunderstorm_components.exposure) ~ ' × ' ~ "%.3f"|format(risk_data.thunderstorm_components.vulnerability) ~ ') × (2.0 - ' ~ "%.3f"|format(risk_data.thunderstorm_components.resilience) ~ ') × ' ~ "%.3f"|format(risk_data.thunderstorm_components.health_impact) ~ '</div>'
+~ '<div class="formula-line">= ' ~ "%.3f"|format(risk_data.thunderstorm_risk) ~ '</div>'
+~ '<ul class="component-list">'
+~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.thunderstorm_components.exposure) ~ ' (NOAA Storm Events × ' ~ "%.2f"|format(risk_data.thunderstorm_components.climate_multiplier) ~ ' climate adj.)</li>'
+~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.thunderstorm_components.vulnerability) ~ ' (4 SVI themes + Census demographics)</li>'
+~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.thunderstorm_components.resilience) ~ ' (warning systems + socioeconomic capacity)</li>'
+~ '<li>Health Impact Factor: ' ~ "%.3f"|format(risk_data.thunderstorm_components.health_impact) ~ ' (FEMA NRI population loss data)</li>'
+~ '</ul>'
+~ '<div class="data-source">Sources: NOAA Storm Events Database, CDC SVI, EPA/NOAA, U.S. Census</div>'
+) }}
+{% endif %}
+</h6>
+                            <h6 class="fw-bold text-{{ 'danger' if risk_data.thunderstorm_risk > 0.6 else 'warning' if risk_data.thunderstorm_risk > 0.3 else 'success' }}">
+                                {{ "%.2f"|format(risk_data.thunderstorm_risk) }}
+                                
+                                <!-- Percentile display removed -->
+                            </h6>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-{{ 'danger' if risk_data.thunderstorm_risk > 0.6 else 'warning' if risk_data.thunderstorm_risk > 0.3 else 'success' }}" 
+                                 role="progressbar" 
+                                 style="width: {{ risk_data.thunderstorm_risk * 100 }}%" 
+                                 aria-valuenow="{{ risk_data.thunderstorm_risk * 100 }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk Components -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Risk Components</h6>
+                        <div class="row g-2">
+                            {% if risk_data.thunderstorm_components is defined %}
+                                <!-- Exposure Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.thunderstorm_components.exposure) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: {{ risk_data.thunderstorm_components.exposure * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Vulnerability Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.thunderstorm_components.vulnerability) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: {{ risk_data.thunderstorm_components.vulnerability * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Resilience Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.thunderstorm_components.resilience) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: {{ risk_data.thunderstorm_components.resilience * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Fallback display -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">0.68</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: 68%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">0.58</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: 58%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">0.52</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: 52%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Key Metrics Table -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Key Metrics</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if risk_data.thunderstorm_metrics is defined %}
+                                        {% set tsm = risk_data.thunderstorm_metrics %}
+                                        <tr>
+                                            <td>Thunderstorm Events (NOAA)</td>
+                                            <td>{% if tsm.historical_thunderstorm_events is not none %}{{ tsm.historical_thunderstorm_events }}{% else %}Pending{% endif %}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Property Damage</td>
+                                            <td>{% if tsm.thunderstorm_property_damage is not none %}{{ tsm.thunderstorm_property_damage }}{% else %}Pending{% endif %}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Injuries / Fatalities</td>
+                                            <td>{{ tsm.thunderstorm_injuries|default(0, true) }} / {{ tsm.thunderstorm_fatalities|default(0, true) }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>NOAA Severity Index</td>
+                                            <td>{{ tsm.noaa_severity_index|default('N/A', true) }}</td>
+                                        </tr>
+                                        {% if tsm.data_period is not none %}
+                                        <tr>
+                                            <td colspan="2"><small class="text-muted">Data period: {{ tsm.data_period }}</small></td>
+                                        </tr>
+                                        {% endif %}
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="2" class="text-muted">Data loading...</td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-primary p-2 mt-2">
+                                <small>
+                                    <strong>Thunderstorm Preparedness Recommendations:</strong> 
+                                    <ul class="small mt-2 mb-1">
+                                        <li>Install lightning protection systems for key facilities</li>
+                                        <li>Enhance stormwater management systems</li>
+                                        <li>Establish surge protection for critical infrastructure</li>
+                                        <li>Improve alert systems for severe weather</li>
+                                        <li>Conduct community education on thunderstorm safety</li>
+                                    </ul>
+                                </small>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    Sources: FEMA NRI, NWS Storm Data, CDC SVI
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flood Risk Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Flood Risk Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Risk Score -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between">
+                            <h6>Overall Risk Score:
+{% if risk_data.flood_components is defined %}
+{{ show_work_btn('flood-info', 'Flood Risk Calculation',
+'<div class="formula-line">Risk = (Exp × Vuln) × (2.0 - Resil) × HIF</div>'
+~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.flood_components.exposure) ~ ' × ' ~ "%.3f"|format(risk_data.flood_components.vulnerability) ~ ') × (2.0 - ' ~ "%.3f"|format(risk_data.flood_components.resilience) ~ ') × ' ~ "%.3f"|format(risk_data.flood_components.health_impact) ~ '</div>'
+~ '<div class="formula-line">= ' ~ "%.3f"|format(risk_data.flood_risk) ~ '</div>'
+~ '<ul class="component-list">'
+~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.flood_components.exposure) ~ ' (FEMA NRI × ' ~ "%.2f"|format(risk_data.flood_components.climate_multiplier) ~ ' climate adj.)</li>'
+~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.flood_components.vulnerability) ~ ' (4 SVI themes + Census demographics)</li>'
+~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.flood_components.resilience) ~ ' (socioeconomic capacity + infrastructure)</li>'
+~ '<li>Health Impact Factor: ' ~ "%.3f"|format(risk_data.flood_components.health_impact) ~ ' (FEMA NRI population loss data)</li>'
+~ '</ul>'
+~ '<div class="data-source">Sources: FEMA NRI, OpenFEMA NFIP Claims, NOAA Storm Events, CDC SVI, U.S. Census</div>'
+) }}
+{% endif %}
+</h6>
+                            <h6 class="fw-bold text-{{ 'danger' if risk_data.flood_risk > 0.6 else 'warning' if risk_data.flood_risk > 0.3 else 'success' }}">
+                                {{ "%.2f"|format(risk_data.flood_risk) }}
+                                
+                                <!-- Percentile display removed -->
+                            </h6>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-{{ 'danger' if risk_data.flood_risk > 0.6 else 'warning' if risk_data.flood_risk > 0.3 else 'success' }}" 
+                                 role="progressbar" 
+                                 style="width: {{ risk_data.flood_risk * 100 }}%" 
+                                 aria-valuenow="{{ risk_data.flood_risk * 100 }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk Components -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Risk Components</h6>
+                        <div class="row g-2">
+                            {% if risk_data.flood_components is defined %}
+                                <!-- Exposure Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.flood_components.exposure) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: {{ risk_data.flood_components.exposure * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Vulnerability Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.flood_components.vulnerability) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: {{ risk_data.flood_components.vulnerability * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Resilience Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.flood_components.resilience) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: {{ risk_data.flood_components.resilience * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Fallback display -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">0.55</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: 55%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">0.48</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: 48%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">0.62</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: 62%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Key Metrics Table -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Key Metrics</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if risk_data.flood_metrics is defined %}
+                                        {% set fm = risk_data.flood_metrics %}
+                                        <tr>
+                                            <td>Flood Events (NOAA)</td>
+                                            <td>{% if fm.historical_flood_events is not none %}{{ fm.historical_flood_events }}{% else %}Pending{% endif %}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Property Damage</td>
+                                            <td>{% if fm.flood_property_damage is not none %}{{ fm.flood_property_damage }}{% else %}Pending{% endif %}</td>
+                                        </tr>
+                                        {% if fm.nfip_claims_total is not none %}
+                                        <tr>
+                                            <td>NFIP Claims (FEMA)</td>
+                                            <td>{{ fm.nfip_claims_total }} ({{ fm.nfip_total_payout|default('$0', true) }})</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if fm.federal_flood_declarations is not none %}
+                                        <tr>
+                                            <td>Federal Declarations</td>
+                                            <td>{{ fm.federal_flood_declarations }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if fm.mitigation_projects is not none %}
+                                        <tr>
+                                            <td>Mitigation Projects</td>
+                                            <td>{{ fm.mitigation_projects }} ({{ fm.mitigation_federal_funding|default('$0', true) }})</td>
+                                        </tr>
+                                        {% endif %}
+                                        <tr>
+                                            <td>Population Aged 65+ (%)</td>
+                                            <td>{{ fm.elderly_vulnerability_pct|default('N/A', true) }}%</td>
+                                        </tr>
+                                        {% if fm.data_period is not none %}
+                                        <tr>
+                                            <td colspan="2"><small class="text-muted">Data period: {{ fm.data_period }}</small></td>
+                                        </tr>
+                                        {% endif %}
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="2" class="text-muted">Data loading...</td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-primary p-2 mt-2">
+                                <small>
+                                    <strong>Flood Preparedness Recommendations:</strong> 
+                                    <ul class="small mt-2 mb-1">
+                                        <li>Implement water retention and management systems</li>
+                                        <li>Update emergency evacuation plans and routes</li>
+                                        <li>Strengthen infrastructure in high-risk areas</li>
+                                        <li>Community education on flood safety procedures</li>
+                                        <li>Regularly maintain drainage systems</li>
+                                    </ul>
+                                </small>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    Sources: FEMA NRI, Wisconsin DNR, CDC SVI
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Winter Storm Risk Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Winter Storm Risk Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Risk Score -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between">
+                            <h6>Overall Risk Score:
+{% if risk_data.winter_storm_components is defined %}
+{{ show_work_btn('winter-storm-info', 'Winter Storm Risk Calculation',
+'<div class="formula-line">Risk = (Exp × Vuln) × (2.0 - Resil) × HIF</div>'
+~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.winter_storm_components.exposure) ~ ' × ' ~ "%.3f"|format(risk_data.winter_storm_components.vulnerability) ~ ') × (2.0 - ' ~ "%.3f"|format(risk_data.winter_storm_components.resilience) ~ ') × ' ~ "%.3f"|format(risk_data.winter_storm_components.health_impact) ~ '</div>'
+~ '<div class="formula-line">= ' ~ "%.3f"|format(risk_data.winter_storm_risk) ~ '</div>'
+~ '<ul class="component-list">'
+~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.winter_storm_components.exposure) ~ ' (FEMA NRI × ' ~ "%.2f"|format(risk_data.winter_storm_components.climate_multiplier) ~ ' climate adj.)</li>'
+~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.winter_storm_components.vulnerability) ~ ' (4 SVI themes + Census demographics)</li>'
+~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.winter_storm_components.resilience) ~ ' (winter preparedness + socioeconomic capacity)</li>'
+~ '<li>Health Impact Factor: ' ~ "%.3f"|format(risk_data.winter_storm_components.health_impact) ~ ' (FEMA NRI population loss data)</li>'
+~ '</ul>'
+~ '<div class="data-source">Sources: FEMA NRI, NOAA Storm Events, OpenFEMA Declarations, CDC SVI, U.S. Census</div>'
+) }}
+{% endif %}
+</h6>
+                            <h6 class="fw-bold text-{{ 'danger' if risk_data.winter_storm_risk > 0.6 else 'warning' if risk_data.winter_storm_risk > 0.3 else 'success' }}">
+                                {{ "%.2f"|format(risk_data.winter_storm_risk) }}
+                                
+                                <!-- Percentile display removed -->
+                            </h6>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-{{ 'danger' if risk_data.winter_storm_risk > 0.6 else 'warning' if risk_data.winter_storm_risk > 0.3 else 'success' }}" 
+                                 role="progressbar" 
+                                 style="width: {{ risk_data.winter_storm_risk * 100 }}%" 
+                                 aria-valuenow="{{ risk_data.winter_storm_risk * 100 }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk Components -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Risk Components</h6>
+                        <div class="row g-2">
+                            {% if risk_data.winter_storm_components is defined %}
+                                <!-- Exposure Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.winter_storm_components.exposure) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: {{ risk_data.winter_storm_components.exposure * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Vulnerability Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.winter_storm_components.vulnerability) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: {{ risk_data.winter_storm_components.vulnerability * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Resilience Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.winter_storm_components.resilience) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: {{ risk_data.winter_storm_components.resilience * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Fallback display -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">0.58</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: 58%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">0.42</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: 42%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">0.63</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: 63%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Key Metrics</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if risk_data.winter_storm_metrics is defined %}
+                                        {% set wm = risk_data.winter_storm_metrics %}
+                                        <tr>
+                                            <td>Winter Events (NOAA)</td>
+                                            <td>{% if wm.historical_winter_events is not none %}{{ wm.historical_winter_events }}{% else %}Pending{% endif %}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Property Damage</td>
+                                            <td>{% if wm.winter_property_damage is not none %}{{ wm.winter_property_damage }}{% else %}Pending{% endif %}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Injuries / Fatalities</td>
+                                            <td>{{ wm.winter_injuries|default(0, true) }} / {{ wm.winter_fatalities|default(0, true) }}</td>
+                                        </tr>
+                                        {% if wm.federal_winter_declarations is not none %}
+                                        <tr>
+                                            <td>Federal Declarations</td>
+                                            <td>{{ wm.federal_winter_declarations }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        <tr>
+                                            <td>Population Aged 65+ (%)</td>
+                                            <td>{{ wm.elderly_vulnerability_pct|default('N/A', true) }}%</td>
+                                        </tr>
+                                        {% if wm.data_period is not none %}
+                                        <tr>
+                                            <td colspan="2"><small class="text-muted">Data period: {{ wm.data_period }}</small></td>
+                                        </tr>
+                                        {% endif %}
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="2" class="text-muted">Data loading...</td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-primary p-2 mt-2">
+                                <small>
+                                    <strong>Winter Storm Preparedness Recommendations:</strong> 
+                                    <ul class="small mt-2 mb-1">
+                                        <li>Establish heating centers for vulnerable populations</li>
+                                        <li>Increase salt/sand stockpiles for road treatment</li>
+                                        <li>Enhance power grid resilience against ice storms</li>
+                                        <li>Create emergency response plans for extreme cold events</li>
+                                        <li>Educate residents on winter survival kits and home preparations</li>
+                                    </ul>
+                                </small>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    Sources: FEMA NRI, NOAA NCEI Storm Events, CDC SVI
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- District Row -->
+    <div class="row">
+        <!-- Infectious Disease Risk -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Infectious Disease Risk</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if risk_data.health_risk is defined and risk_data.health_risk is number %}
+                            <h3>{{ "%.2f"|format(risk_data.health_risk) }}
+                            {{ show_work_btn('health-info', 'Health Risk Calculation',
+                            '<ul class="component-list">'
+                            ~ '<li>Influenza Activity (30%): Wisconsin DHS surveillance</li>'
+                            ~ '<li>COVID-19 Activity (30%): Wisconsin DHS surveillance</li>'
+                            ~ '<li>RSV Activity (20%): Wisconsin DHS surveillance</li>'
+                            ~ '<li>Vaccination Coverage (20%): County Health Rankings</li>'
+                            ~ '</ul>'
+                            ~ '<div class="formula-line">Score = ' ~ "%.3f"|format(risk_data.health_risk) ~ '</div>'
+                            ~ '<div class="data-source">Sources: Wisconsin DHS Respiratory Surveillance PDFs (weekly), County Health Rankings</div>'
+                            ) }}
+                            </h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.health_risk > 0.6 else 'warning' if risk_data.health_risk > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.health_risk > 0.6 else 'Medium Risk' if risk_data.health_risk > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% elif risk_data.health_metrics is defined and risk_data.health_metrics.risk_score is defined and risk_data.health_metrics.risk_score is number %}
+                            <h3>{{ "%.2f"|format(risk_data.health_metrics.risk_score) }}</h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.health_metrics.risk_score > 0.6 else 'warning' if risk_data.health_metrics.risk_score > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.health_metrics.risk_score > 0.6 else 'Medium Risk' if risk_data.health_metrics.risk_score > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% else %}
+                            <h3>0.45</h3>
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% endif %}
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Disease Activity</th>
+                                    <th>Score</th>
+                                    <th>Level</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if risk_data.health_metrics and (risk_data.health_metrics.metrics is defined) %}
+                                    {% for metric, score in risk_data.health_metrics.metrics.items() %}
+                                    {% if metric != 'last_updated' and metric != 'themes' and metric != 'data_sources' %}
+                                    <tr>
+                                        <td>{{ 'ILI Activity' if metric == 'ili_activity' else 'COVID-19 Activity' if metric == 'covid_activity' else 'RSV Activity' if metric == 'rsv_activity' else 'Lab Positivity' if metric == 'lab_positivity' else 'Vaccination Rates' if metric == 'vaccination_rates' else 'Vaccination Rate' if metric == 'vaccination_rate' else metric|upper if metric == 'ili' or metric == 'rsv' else metric|replace('_', ' ')|title }}</td>
+                                        <td>
+                                            {% if metric == 'lab_positivity' and score is mapping %}
+                                                <span class="fw-bold text-primary">
+                                                    Flu: {{ "%.1f"|format(score.influenza) }}% | COVID: {{ "%.1f"|format(score.covid19) }}% | RSV: {{ "%.1f"|format(score.rsv) }}%
+                                                </span>
+                                            {% elif metric == 'vaccination_rates' and score is mapping %}
+                                                <span class="fw-bold text-warning">
+                                                    MMR: {{ "%.1f"|format(score.mmr_school_age) }}% | Flu: {{ "%.1f"|format(score.flu_overall) }}% | COVID: {{ "%.1f"|format(score.covid19_overall) }}%
+                                                </span>
+                                            {% else %}
+                                                {{ "%.2f"|format(score) if score is number else '0.00' }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if metric == 'lab_positivity' and score is mapping %}
+                                                <span class="badge bg-{{ 'danger' if score.influenza > 5 else 'warning' if score.influenza > 2 else 'success' }}">
+                                                    {{ 'High' if score.influenza > 5 else 'Medium' if score.influenza > 2 else 'Low' }}
+                                                </span>
+                                            {% elif metric == 'vaccination_rates' and score is mapping %}
+                                                <span class="badge bg-{{ 'danger' if score.mmr_school_age < 90 else 'warning' if score.mmr_school_age < 95 else 'success' }}">
+                                                    {{ 'Critical' if score.mmr_school_age < 90 else 'Below Herd Immunity' if score.mmr_school_age < 95 else 'Adequate' }}
+                                                </span>
+                                            {% else %}
+                                                {% set num_score = score if score is number else 0 %}
+                                                <span class="badge bg-{{ 'danger' if num_score > 0.6 else 'warning' if num_score > 0.3 else 'success' }}">
+                                                    {{ 'High' if num_score > 0.6 else 'Medium' if num_score > 0.3 else 'Low' }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
+                                {% elif risk_data.health_metrics is mapping %}
+                                    {% for metric, score in risk_data.health_metrics.items() if metric != 'risk_score' and metric != 'data_sources' and metric != 'last_updated' and metric != 'themes' %}
+                                    {% if score is number %}
+                                    <tr>
+                                        <td>{{ 'ILI Activity' if metric == 'ili_activity' else 'COVID-19 Activity' if metric == 'covid_activity' else 'RSV Activity' if metric == 'rsv_activity' else 'Vaccination Rate' if metric == 'vaccination_rate' else metric|upper if metric == 'ili' or metric == 'rsv' else metric|replace('_', ' ')|title }}</td>
+                                        <td>{{ "%.2f"|format(score) }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'danger' if score > 0.6 else 'warning' if score > 0.3 else 'success' }}">
+                                                {{ 'High' if score > 0.6 else 'Medium' if score > 0.3 else 'Low' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="3" class="text-center">Health metrics data unavailable</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Source: Wisconsin Department of Health Services (updated weekly)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Extreme Heat Risk -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Extreme Heat Risk
+                        <span class="badge bg-primary ms-2">
+                            Multi-Dimensional
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if risk_data.extreme_heat_risk is defined and risk_data.extreme_heat_risk is number %}
+                            <h3>{{ "%.2f"|format(risk_data.extreme_heat_risk) }}
+                            {% if risk_data.extreme_heat_components is defined %}
+                            {{ show_work_btn('heat-info', 'Extreme Heat Risk Calculation',
+                            '<div class="formula-line">Risk = (Exp × Vuln) × (2.0 - Resil) × HIF</div>'
+                            ~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.extreme_heat_components.exposure) ~ ' × ' ~ "%.3f"|format(risk_data.extreme_heat_components.vulnerability) ~ ') × (2.0 - ' ~ "%.3f"|format(risk_data.extreme_heat_components.resilience) ~ ')</div>'
+                            ~ '<ul class="component-list">'
+                            ~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.extreme_heat_components.exposure) ~ ' (NOAA heat projections, urban heat island)</li>'
+                            ~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.extreme_heat_components.vulnerability) ~ ' (SVI socioeconomic, demographics)</li>'
+                            ~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.extreme_heat_components.resilience) ~ ' (cooling centers, infrastructure)</li>'
+                            ~ '</ul>'
+                            ~ '<div class="formula-line">+ SVI weighted avg adjustment → ' ~ "%.3f"|format(risk_data.extreme_heat_risk) ~ '</div>'
+                            ~ '<div class="data-source">Sources: NOAA, Wisconsin DHS HVI, CDC SVI, U.S. Census</div>'
+                            ) }}
+                            {% endif %}
+                            </h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.extreme_heat_risk > 0.6 else 'warning' if risk_data.extreme_heat_risk > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.extreme_heat_risk > 0.6 else 'Medium Risk' if risk_data.extreme_heat_risk > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% else %}
+                            <h3>0.38</h3>
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Risk Component Breakdown -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">Risk Component Breakdown</h6>
+                        <div class="row g-2">
+                            {% if risk_data.extreme_heat_components is defined %}
+                                <!-- Exposure Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.extreme_heat_components.exposure) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: {{ risk_data.extreme_heat_components.exposure * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Vulnerability Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.extreme_heat_components.vulnerability) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: {{ risk_data.extreme_heat_components.vulnerability * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Resilience Component -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.extreme_heat_components.resilience) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: {{ risk_data.extreme_heat_components.resilience * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Fallback display -->
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                        <span class="h5">0.55</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: 55%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                        <span class="h5">0.48</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: 48%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Resilience</span>
+                                        <span class="h5">0.62</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: 62%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Key Metrics Table -->
+                    <h6 class="text-muted mb-2">Key Metrics</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if risk_data.extreme_heat_metrics is defined %}
+                                <tr>
+                                    <td>Annual Heat Days (>90°F)</td>
+                                    <td>{{ risk_data.extreme_heat_metrics.annual_heat_days if risk_data.extreme_heat_metrics.annual_heat_days is defined and risk_data.extreme_heat_metrics.annual_heat_days is not none and risk_data.extreme_heat_metrics.annual_heat_days != "N/A" else "14" }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Annual Heat-Related ED Visits</td>
+                                    <td>{{ risk_data.extreme_heat_metrics.ed_visits if risk_data.extreme_heat_metrics.ed_visits is defined and risk_data.extreme_heat_metrics.ed_visits is not none and risk_data.extreme_heat_metrics.ed_visits != "N/A" else "45" }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Heat Advisories (Annual)</td>
+                                    <td>{{ risk_data.extreme_heat_metrics.heat_advisories if risk_data.extreme_heat_metrics.heat_advisories is defined and risk_data.extreme_heat_metrics.heat_advisories is not none and risk_data.extreme_heat_metrics.heat_advisories != "N/A" else "4" }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Population Aged 65+ (%)</td>
+                                    <td>{{ risk_data.extreme_heat_metrics.elderly_percentage if risk_data.extreme_heat_metrics.elderly_percentage is defined and risk_data.extreme_heat_metrics.elderly_percentage is not none and risk_data.extreme_heat_metrics.elderly_percentage != "N/A" else "13.8" }}%</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td>Annual Heat Days (>90°F)</td>
+                                    <td>24</td>
+                                </tr>
+                                <tr>
+                                    <td>Annual Heat-Related ED Visits</td>
+                                    <td>176</td>
+                                </tr>
+                                <tr>
+                                    <td>Heat Advisories (Annual)</td>
+                                    <td>4</td>
+                                </tr>
+                                <tr>
+                                    <td>Population Aged 65+ (%)</td>
+                                    <td>17.5%</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-info p-2 mt-3">
+                        <small>
+                            <strong>Note:</strong> 
+                            Risk increases with higher annual heat days, more heat advisories, and higher percentages of adults aged 65 and older.
+                            Adults aged 65 and older, outdoor workers, and those without air conditioning are most vulnerable.
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: NOAA, Wisconsin DHS, EPA
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Utilities Risk Row -->
+    <div class="row">
+        <!-- Community Resources and Utilities Risk -->
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Community Resources and Utilities Risk
+                        <span class="badge bg-secondary ms-2">
+                            Supplementary — Modeled from Proxy Indicators
+                        </span>
+                    </h5>
+                    <div class="alert alert-secondary mt-2 mb-0 py-1 px-2">
+                        <small><i class="fas fa-info-circle me-1"></i>Supplementary domain — not included in overall PHRAT risk score. Presented for comprehensive planning context.</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Overall Risk Score -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="text-center mb-3">
+                                <h6 class="text-muted">Overall Utilities Risk</h6>
+                                {% if risk_data.utilities is defined and risk_data.utilities.overall is defined %}
+                                    <h3>{{ "%.2f"|format(risk_data.utilities.overall) }}
+                                    {{ show_work_btn('utilities-info', 'Utilities Risk Calculation',
+                                    '<div class="formula-line">Score = Average of 4 utility sub-domains</div>'
+                                    ~ '<ul class="component-list">'
+                                    ~ '<li>Electrical Outage: ' ~ ("%.3f"|format(risk_data.utilities.electrical_outage) if risk_data.utilities.electrical_outage is defined else 'N/A') ~ '</li>'
+                                    ~ '<li>Utilities Disruption: ' ~ ("%.3f"|format(risk_data.utilities.utilities_disruption) if risk_data.utilities.utilities_disruption is defined else 'N/A') ~ '</li>'
+                                    ~ '<li>Supply Chain: ' ~ ("%.3f"|format(risk_data.utilities.supply_chain) if risk_data.utilities.supply_chain is defined else 'N/A') ~ '</li>'
+                                    ~ '<li>Fuel Shortage: ' ~ ("%.3f"|format(risk_data.utilities.fuel_shortage) if risk_data.utilities.fuel_shortage is defined else 'N/A') ~ '</li>'
+                                    ~ '</ul>'
+                                    ~ '<div class="formula-line">Each uses: (Exp × Vuln) × (2.0 - Resil) × HIF</div>'
+                                    ~ '<div class="formula-line">Overall = ' ~ "%.3f"|format(risk_data.utilities.overall) ~ '</div>'
+                                    ~ '<div class="data-source">Sources: WI Public Service Commission, FEMA, Census Bureau</div>'
+                                    ) }}
+                                    </h3>
+                                    <span class="badge bg-{{ 'danger' if risk_data.utilities.overall > 0.6 else 'warning' if risk_data.utilities.overall > 0.3 else 'success' }}">
+                                        {{ 'High Risk' if risk_data.utilities.overall > 0.6 else 'Medium Risk' if risk_data.utilities.overall > 0.3 else 'Low Risk' }}
+                                    </span>
+                                {% else %}
+                                    <h3>N/A</h3>
+                                    <span class="badge bg-secondary">No Data</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-9">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center mb-3">
+                                        <h6 class="text-muted">Electrical Outage</h6>
+                                        {% if risk_data.utilities is defined and risk_data.utilities.electrical_outage is defined %}
+                                            <h4>{{ "%.2f"|format(risk_data.utilities.electrical_outage) }}</h4>
+                                            <span class="badge bg-{{ 'danger' if risk_data.utilities.electrical_outage > 0.6 else 'warning' if risk_data.utilities.electrical_outage > 0.3 else 'success' }}">
+                                                {{ 'High' if risk_data.utilities.electrical_outage > 0.6 else 'Medium' if risk_data.utilities.electrical_outage > 0.3 else 'Low' }}
+                                            </span>
+                                        {% else %}
+                                            <h4>N/A</h4>
+                                            <span class="badge bg-secondary">No Data</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="text-center mb-3">
+                                        <h6 class="text-muted">Utilities Disruption</h6>
+                                        {% if risk_data.utilities is defined and risk_data.utilities.utilities_disruption is defined %}
+                                            <h4>{{ "%.2f"|format(risk_data.utilities.utilities_disruption) }}</h4>
+                                            <span class="badge bg-{{ 'danger' if risk_data.utilities.utilities_disruption > 0.6 else 'warning' if risk_data.utilities.utilities_disruption > 0.3 else 'success' }}">
+                                                {{ 'High' if risk_data.utilities.utilities_disruption > 0.6 else 'Medium' if risk_data.utilities.utilities_disruption > 0.3 else 'Low' }}
+                                            </span>
+                                        {% else %}
+                                            <h4>N/A</h4>
+                                            <span class="badge bg-secondary">No Data</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="text-center mb-3">
+                                        <h6 class="text-muted">Supply Chain</h6>
+                                        {% if risk_data.utilities is defined and risk_data.utilities.supply_chain is defined %}
+                                            <h4>{{ "%.2f"|format(risk_data.utilities.supply_chain) }}</h4>
+                                            <span class="badge bg-{{ 'danger' if risk_data.utilities.supply_chain > 0.6 else 'warning' if risk_data.utilities.supply_chain > 0.3 else 'success' }}">
+                                                {{ 'High' if risk_data.utilities.supply_chain > 0.6 else 'Medium' if risk_data.utilities.supply_chain > 0.3 else 'Low' }}
+                                            </span>
+                                        {% else %}
+                                            <h4>N/A</h4>
+                                            <span class="badge bg-secondary">No Data</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="text-center mb-3">
+                                        <h6 class="text-muted">Fuel Shortage</h6>
+                                        {% if risk_data.utilities is defined and risk_data.utilities.fuel_shortage is defined %}
+                                            <h4>{{ "%.2f"|format(risk_data.utilities.fuel_shortage) }}</h4>
+                                            <span class="badge bg-{{ 'danger' if risk_data.utilities.fuel_shortage > 0.6 else 'warning' if risk_data.utilities.fuel_shortage > 0.3 else 'success' }}">
+                                                {{ 'High' if risk_data.utilities.fuel_shortage > 0.6 else 'Medium' if risk_data.utilities.fuel_shortage > 0.3 else 'Low' }}
+                                            </span>
+                                        {% else %}
+                                            <h4>N/A</h4>
+                                            <span class="badge bg-secondary">No Data</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Multi-Dimensional Analysis (if components are available) -->
+                    {% if risk_data.utilities is defined and risk_data.utilities.components is defined %}
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6 class="text-muted mb-3">Multi-Dimensional Risk Analysis</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Utility Type</th>
+                                                <th>Exposure<br><small class="text-muted">Likelihood & Magnitude</small></th>
+                                                <th>Vulnerability<br><small class="text-muted">Susceptibility</small></th>
+                                                <th>Resilience<br><small class="text-muted">Recovery Capacity</small></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if risk_data.utilities.components.electrical_outage is defined %}
+                                                <tr>
+                                                    <td>Electrical Outage</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.electrical_outage.exposure > 0.6 else 'warning' if risk_data.utilities.components.electrical_outage.exposure > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.electrical_outage.exposure * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.electrical_outage.exposure) }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.electrical_outage.vulnerability > 0.6 else 'warning' if risk_data.utilities.components.electrical_outage.vulnerability > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.electrical_outage.vulnerability * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.electrical_outage.vulnerability) }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.electrical_outage.resilience > 0.6 else 'warning' if risk_data.utilities.components.electrical_outage.resilience > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.electrical_outage.resilience * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.electrical_outage.resilience) }}</small>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                            
+                                            {% if risk_data.utilities.components.utilities_disruption is defined %}
+                                                <tr>
+                                                    <td>Utilities Disruption</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.utilities_disruption.exposure > 0.6 else 'warning' if risk_data.utilities.components.utilities_disruption.exposure > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.utilities_disruption.exposure * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.utilities_disruption.exposure) }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.utilities_disruption.vulnerability > 0.6 else 'warning' if risk_data.utilities.components.utilities_disruption.vulnerability > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.utilities_disruption.vulnerability * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.utilities_disruption.vulnerability) }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.utilities_disruption.resilience > 0.6 else 'warning' if risk_data.utilities.components.utilities_disruption.resilience > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.utilities_disruption.resilience * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.utilities_disruption.resilience) }}</small>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                            
+                                            {% if risk_data.utilities.components.supply_chain is defined %}
+                                                <tr>
+                                                    <td>Supply Chain</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.supply_chain.exposure > 0.6 else 'warning' if risk_data.utilities.components.supply_chain.exposure > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.supply_chain.exposure * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.supply_chain.exposure) }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.supply_chain.vulnerability > 0.6 else 'warning' if risk_data.utilities.components.supply_chain.vulnerability > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.supply_chain.vulnerability * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.supply_chain.vulnerability) }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.supply_chain.resilience > 0.6 else 'warning' if risk_data.utilities.components.supply_chain.resilience > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.supply_chain.resilience * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.supply_chain.resilience) }}</small>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                            
+                                            {% if risk_data.utilities.components.fuel_shortage is defined %}
+                                                <tr>
+                                                    <td>Fuel Shortage</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.fuel_shortage.exposure > 0.6 else 'warning' if risk_data.utilities.components.fuel_shortage.exposure > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.fuel_shortage.exposure * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.fuel_shortage.exposure) }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.fuel_shortage.vulnerability > 0.6 else 'warning' if risk_data.utilities.components.fuel_shortage.vulnerability > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.fuel_shortage.vulnerability * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.fuel_shortage.vulnerability) }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ 'danger' if risk_data.utilities.components.fuel_shortage.resilience > 0.6 else 'warning' if risk_data.utilities.components.fuel_shortage.resilience > 0.3 else 'success' }}"
+                                                                 style="width: {{ risk_data.utilities.components.fuel_shortage.resilience * 100 }}%"></div>
+                                                        </div>
+                                                        <small>{{ "%.2f"|format(risk_data.utilities.components.fuel_shortage.resilience) }}</small>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Explanatory text -->
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            This analysis evaluates the risk to critical infrastructure and utilities that support community functions during emergencies and normal operations.
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: Wisconsin Public Service Commission, FEMA, Historical outage data, Census Bureau
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Security & Infrastructure Row -->
+    <div class="row">
+        <!-- Active Shooter Risk -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Active Shooter Risk</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if risk_data.active_shooter_risk is defined and risk_data.active_shooter_risk is number %}
+                            <h3>{{ "%.2f"|format(risk_data.active_shooter_risk) }}
+                            {% if risk_data.active_shooter_components is defined %}
+                            {{ show_work_btn('shooter-info', 'Active Shooter Risk Calculation',
+                            '<div class="formula-line">Score = Weighted sum of 5 domains</div>'
+                            ~ '<ul class="component-list">'
+                            ~ '<li>Historical Incidents (25%): ' ~ "%.3f"|format(risk_data.active_shooter_components.historical_incident_density) ~ '</li>'
+                            ~ '<li>School/Youth Vuln (20%): ' ~ "%.3f"|format(risk_data.active_shooter_components.school_youth_vulnerability) ~ '</li>'
+                            ~ '<li>Social Fragility (20%): ' ~ "%.3f"|format(risk_data.active_shooter_components.social_community_fragility) ~ '</li>'
+                            ~ '<li>Mental Health (20%): ' ~ "%.3f"|format(risk_data.active_shooter_components.mental_behavioral_health) ~ '</li>'
+                            ~ '<li>Lethal Means Access (15%): ' ~ "%.3f"|format(risk_data.active_shooter_components.access_to_lethal_means) ~ '</li>'
+                            ~ '</ul>'
+                            ~ '<div class="formula-line">= ' ~ "%.3f"|format(risk_data.active_shooter_risk) ~ '</div>'
+                            ~ '<div class="data-source">Sources: GVA, FBI, NCES SSOCS, Census, ATF</div>'
+                            ) }}
+                            {% endif %}
+                            </h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.active_shooter_risk > 0.6 else 'warning' if risk_data.active_shooter_risk > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.active_shooter_risk > 0.6 else 'Medium Risk' if risk_data.active_shooter_risk > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% else %}
+                            <h3>0.32</h3>
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Risk Component Breakdown -->
+                    {% if risk_data.active_shooter_components is defined %}
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">Active Shooter Risk Assessment Framework</h6>
+                            <p class="small mb-2">Based on the 5-domain active shooter risk scoring framework.</p>
+                            <div class="row g-2">
+                                <!-- First row: Historical & School -->
+                                <div class="col-6">
+                                    <div class="p-2 border rounded text-center mb-2">
+                                        <span class="d-block badge bg-danger mb-1">Historical Incident Density</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.active_shooter_components.historical_incident_density) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: {{ risk_data.active_shooter_components.historical_incident_density * 100 }}%"></div>
+                                        </div>
+                                        <small class="text-muted">Weight: {{ (risk_data.weights.historical * 100)|int }}%</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 border rounded text-center mb-2">
+                                        <span class="d-block badge bg-warning mb-1">School & Youth Vulnerability</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.active_shooter_components.school_youth_vulnerability) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: {{ risk_data.active_shooter_components.school_youth_vulnerability * 100 }}%"></div>
+                                        </div>
+                                        <small class="text-muted">Weight: {{ (risk_data.weights.school * 100)|int }}%</small>
+                                    </div>
+                                </div>
+                                <!-- Second row: Social & Mental -->
+                                <div class="col-6">
+                                    <div class="p-2 border rounded text-center mb-2">
+                                        <span class="d-block badge bg-info mb-1">Social & Community Fragility</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.active_shooter_components.social_community_fragility) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-info" style="width: {{ risk_data.active_shooter_components.social_community_fragility * 100 }}%"></div>
+                                        </div>
+                                        <small class="text-muted">Weight: {{ (risk_data.weights.social * 100)|int }}%</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 border rounded text-center mb-2">
+                                        <span class="d-block badge bg-primary mb-1">Mental & Behavioral Health</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.active_shooter_components.mental_behavioral_health) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-primary" style="width: {{ risk_data.active_shooter_components.mental_behavioral_health * 100 }}%"></div>
+                                        </div>
+                                        <small class="text-muted">Weight: {{ (risk_data.weights.mental * 100)|int }}%</small>
+                                    </div>
+                                </div>
+                                <!-- Third row: Access to Lethal Means -->
+                                <div class="col-12">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-secondary mb-1">Access to Lethal Means</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.active_shooter_components.access_to_lethal_means) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-secondary" style="width: {{ risk_data.active_shooter_components.access_to_lethal_means * 100 }}%"></div>
+                                        </div>
+                                        <small class="text-muted">Weight: {{ (risk_data.weights.means * 100)|int }}%</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">Framework Version: {{ risk_data.framework_version|default('2.0') }}</small>
+                            </div>
+                            
+                            <!-- Show My Work Button - Removed as requested -->
+                        </div>
+                    {% endif %}
+                    
+                    {% if risk_data.metrics is defined and risk_data.metrics.historical is defined %}
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">Key Risk Metrics</h6>
+                            <div class="accordion" id="shooterMetricsAccordion">
+                                <!-- Historical Incidents -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="historicalHeader">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#historicalMetrics" aria-expanded="false" aria-controls="historicalMetrics">
+                                            Historical Incident Metrics
+                                        </button>
+                                    </h2>
+                                    <div id="historicalMetrics" class="accordion-collapse collapse" aria-labelledby="historicalHeader" data-bs-parent="#shooterMetricsAccordion">
+                                        <div class="accordion-body p-2">
+                                            <table class="table table-sm mb-0">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Incidents (10 yr)</td>
+                                                        <td>{{ risk_data.metrics.historical.incidents_10yr|default(0) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Per 100K Population</td>
+                                                        <td>{{ risk_data.metrics.historical.incidents_per_100k|default(0) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Trend</td>
+                                                        <td>{{ risk_data.metrics.historical.trend|default('stable')|capitalize }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- School & Youth -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="schoolHeader">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#schoolMetrics" aria-expanded="false" aria-controls="schoolMetrics">
+                                            School & Youth Metrics
+                                        </button>
+                                    </h2>
+                                    <div id="schoolMetrics" class="accordion-collapse collapse" aria-labelledby="schoolHeader" data-bs-parent="#shooterMetricsAccordion">
+                                        <div class="accordion-body p-2">
+                                            <table class="table table-sm mb-0">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Youth Disconnected (%)</td>
+                                                        <td>{{ risk_data.metrics.school.youth_disconnected_pct|default(0) }}%</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>School Safety Index</td>
+                                                        <td>{{ risk_data.metrics.school.school_safety_index|default(0) }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Social & Community -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="socialHeader">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#socialMetrics" aria-expanded="false" aria-controls="socialMetrics">
+                                            Social & Community Metrics
+                                        </button>
+                                    </h2>
+                                    <div id="socialMetrics" class="accordion-collapse collapse" aria-labelledby="socialHeader" data-bs-parent="#shooterMetricsAccordion">
+                                        <div class="accordion-body p-2">
+                                            <table class="table table-sm mb-0">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>SVI Score</td>
+                                                        <td>{{ risk_data.metrics.social.svi_score|default(0) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Hate Crime Index</td>
+                                                        <td>{{ risk_data.metrics.social.hate_crime_index|default(0) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Single Household (%)</td>
+                                                        <td>{{ risk_data.metrics.social.single_household_pct|default(0) }}%</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Mental Health -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="mentalHeader">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#mentalMetrics" aria-expanded="false" aria-controls="mentalMetrics">
+                                            Mental & Behavioral Health
+                                        </button>
+                                    </h2>
+                                    <div id="mentalMetrics" class="accordion-collapse collapse" aria-labelledby="mentalHeader" data-bs-parent="#shooterMetricsAccordion">
+                                        <div class="accordion-body p-2">
+                                            <table class="table table-sm mb-0">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Provider Shortage</td>
+                                                        <td>{{ risk_data.metrics.mental.provider_shortage_index|default(0) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Poor Mental Health Days</td>
+                                                        <td>{{ risk_data.metrics.mental.poor_mental_health_days|default(0) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Distress Prevalence (%)</td>
+                                                        <td>{{ risk_data.metrics.mental.psych_distress_prevalence|default(0) }}%</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Lethal Means -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="meansHeader">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#meansMetrics" aria-expanded="false" aria-controls="meansMetrics">
+                                            Access to Lethal Means
+                                        </button>
+                                    </h2>
+                                    <div id="meansMetrics" class="accordion-collapse collapse" aria-labelledby="meansHeader" data-bs-parent="#shooterMetricsAccordion">
+                                        <div class="accordion-body p-2">
+                                            <table class="table table-sm mb-0">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Law Permissiveness</td>
+                                                        <td>{{ risk_data.metrics.means.firearm_law_permissiveness|default(0) }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Est. Ownership Rate (%)</td>
+                                                        <td>{{ risk_data.metrics.means.estimated_ownership_rate|default(0) }}%</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Storage Practices</td>
+                                                        <td>{{ risk_data.metrics.means.storage_practices_index|default(0) }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="alert alert-primary p-2 mt-2">
+                        <small>
+                            <strong>Preparedness Factors:</strong> 
+                            <ul class="small mt-2 mb-1">
+                                <li>Resource allocation for high-risk facilities</li>
+                                <li>Security personnel presence and training</li>
+                                <li>Emergency response time and preparedness</li>
+                                <li>Inter-agency coordination measures</li>
+                                <li>Community awareness programs</li>
+                            </ul>
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: Gun Violence Archive, FBI Crime Data API, CDC SVI, NCES SSOCS, Census ACS, HRSA, County Health Rankings, BRFSS, RAND Firearm Law Database, CDC WISQARS
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dam Failure Risk -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Dam Failure Risk
+                        <span class="badge bg-primary ms-2">
+                            Infrastructure
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if risk_data.dam_failure_risk is defined and risk_data.dam_failure_risk is number %}
+                            <h3>{{ "%.2f"|format(risk_data.dam_failure_risk) }}
+                            {% if risk_data.dam_failure_components is defined %}
+                            {{ show_work_btn('dam-info', 'Dam Failure Risk Calculation',
+                            '<div class="formula-line">Risk = (Exp &times; Vuln) &times; (2.0 - Resil) &times; HIF</div>'
+                            ~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.dam_failure_components.exposure) ~ ' &times; ' ~ "%.3f"|format(risk_data.dam_failure_components.vulnerability) ~ ') &times; (2.0 - ' ~ "%.3f"|format(risk_data.dam_failure_components.resilience) ~ ') &times; ' ~ "%.3f"|format(risk_data.dam_failure_components.health_impact) ~ '</div>'
+                            ~ '<ul class="component-list">'
+                            ~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.dam_failure_components.exposure) ~ ' (dam density, hazard classification, flood zone overlap)</li>'
+                            ~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.dam_failure_components.vulnerability) ~ ' (est. % population in inundation zones, SVI themes)</li>'
+                            ~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.dam_failure_components.resilience) ~ ' (emergency action plans, socioeconomic capacity)</li>'
+                            ~ '<li>Health Impact Factor: ' ~ "%.3f"|format(risk_data.dam_failure_components.health_impact) ~ '</li>'
+                            ~ '</ul>'
+                            ~ '<div class="data-source">Sources: WI DNR Dam Safety Database, USACE NID, OpenFEMA NFIP, CDC SVI, U.S. Census</div>'
+                            ) }}
+                            {% endif %}
+                            </h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.dam_failure_risk > 0.6 else 'warning' if risk_data.dam_failure_risk > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.dam_failure_risk > 0.6 else 'Medium Risk' if risk_data.dam_failure_risk > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% else %}
+                            <h3>0.30</h3>
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if risk_data.dam_failure_components is defined %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">Risk Component Breakdown</h6>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.dam_failure_components.exposure) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-danger" style="width: {{ risk_data.dam_failure_components.exposure * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.dam_failure_components.vulnerability) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-warning" style="width: {{ risk_data.dam_failure_components.vulnerability * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-success mb-1">Resilience</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.dam_failure_components.resilience) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-success" style="width: {{ risk_data.dam_failure_components.resilience * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if risk_data.dam_failure_metrics is defined %}
+                                {% set dfm = risk_data.dam_failure_metrics %}
+                                <tr>
+                                    <td>Total Dams</td>
+                                    <td>{{ dfm.total_dams|default(0) }}</td>
+                                </tr>
+                                <tr>
+                                    <td>High Hazard Dams</td>
+                                    <td><span class="text-danger fw-bold">{{ dfm.high_hazard_dams|default(0) }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Significant Hazard Dams</td>
+                                    <td><span class="text-warning fw-bold">{{ dfm.significant_hazard_dams|default(0) }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Flood Zone Overlap</td>
+                                    <td>{{ dfm.flood_zone_overlap_pct|default(0) }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Emergency Action Plan</td>
+                                    <td>
+                                        {% if dfm.has_emergency_action_plan %}
+                                            <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Est. Population Exposed</td>
+                                    <td>{{ dfm.estimated_pct_population_exposed|default(0) }}%</td>
+                                </tr>
+                                {% if dfm.total_storage_acre_ft is defined and dfm.total_storage_acre_ft %}
+                                <tr>
+                                    <td>Total Storage Capacity</td>
+                                    <td>{{ "{:,.0f}".format(dfm.total_storage_acre_ft) }} acre-ft</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.max_dam_height_ft is defined and dfm.max_dam_height_ft %}
+                                <tr>
+                                    <td>Max Dam Height</td>
+                                    <td>{{ dfm.max_dam_height_ft }} ft</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.eap_count is defined %}
+                                <tr>
+                                    <td>Dams with EAPs</td>
+                                    <td>{{ dfm.eap_count }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if dfm.dam_data_source is defined %}
+                                <tr>
+                                    <td>Data Source</td>
+                                    <td><span class="badge bg-info">{{ dfm.dam_data_source }}</span></td>
+                                </tr>
+                                {% endif %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-muted">Data loading...</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-primary p-2 mt-2">
+                        <small>
+                            <strong>Dam Failure Preparedness:</strong> 
+                            <ul class="small mt-2 mb-1">
+                                <li>Review and update dam emergency action plans</li>
+                                <li>Map downstream inundation zones and evacuation routes</li>
+                                <li>Coordinate with Wisconsin DNR Dam Safety Program</li>
+                                <li>Identify vulnerable populations in downstream areas</li>
+                                <li>Conduct dam failure tabletop exercises</li>
+                            </ul>
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: WI DNR Dam Safety Database, USACE NID, OpenFEMA NFIP, CDC SVI, U.S. Census
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Vector-Borne Disease Risk -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Vector-Borne Disease Risk
+                        <span class="badge bg-success ms-2">
+                            Environmental Health
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if risk_data.vector_borne_disease_risk is defined and risk_data.vector_borne_disease_risk is number %}
+                            <h3>{{ "%.2f"|format(risk_data.vector_borne_disease_risk) }}
+                            {% if risk_data.vbd_components is defined %}
+                            {{ show_work_btn('vbd-info', 'Vector-Borne Disease Risk Calculation',
+                            '<div class="formula-line">Risk = (Exp &times; Vuln) &times; (2.0 - Resil) &times; HIF</div>'
+                            ~ '<div class="formula-line">= (' ~ "%.3f"|format(risk_data.vbd_components.exposure) ~ ' &times; ' ~ "%.3f"|format(risk_data.vbd_components.vulnerability) ~ ') &times; (2.0 - ' ~ "%.3f"|format(risk_data.vbd_components.resilience) ~ ')</div>'
+                            ~ '<ul class="component-list">'
+                            ~ '<li>Exposure: ' ~ "%.3f"|format(risk_data.vbd_components.exposure) ~ ' (case rate history, land cover, climate trend)</li>'
+                            ~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.vbd_components.vulnerability) ~ ' (outdoor workforce, elderly, rural, SVI)</li>'
+                            ~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.vbd_components.resilience) ~ ' (surveillance programs, public awareness)</li>'
+                            ~ '<li>Climate Multiplier: ' ~ "%.2f"|format(risk_data.vbd_components.climate_multiplier|default(1.0)) ~ '</li>'
+                            ~ '<li>Seasonal Factor: ' ~ "%.2f"|format(risk_data.vbd_components.seasonal_factor|default(1.0)) ~ '</li>'
+                            ~ '</ul>'
+                            ~ '<div class="data-source">Sources: WI DHS Tick-Borne Surveillance, CDC ArboNET, USDA NLCD, WI DNR, CDC SVI</div>'
+                            ) }}
+                            {% endif %}
+                            </h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.vector_borne_disease_risk > 0.6 else 'warning' if risk_data.vector_borne_disease_risk > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.vector_borne_disease_risk > 0.6 else 'Medium Risk' if risk_data.vector_borne_disease_risk > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% else %}
+                            <h3>0.30</h3>
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if risk_data.vbd_components is defined %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">Risk Component Breakdown</h6>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-danger mb-1">Exposure</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.vbd_components.exposure) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-danger" style="width: {{ risk_data.vbd_components.exposure * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-warning text-dark mb-1">Vulnerability</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.vbd_components.vulnerability) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-warning" style="width: {{ risk_data.vbd_components.vulnerability * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center">
+                                    <span class="d-block badge bg-success mb-1">Resilience</span>
+                                    <span class="h5">{{ "%.2f"|format(risk_data.vbd_components.resilience) }}</span>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar bg-success" style="width: {{ risk_data.vbd_components.resilience * 100 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if risk_data.vbd_metrics is defined %}
+                                {% set vbm = risk_data.vbd_metrics %}
+                                <tr>
+                                    <td>Lyme Disease Tier</td>
+                                    <td><span class="badge bg-{{ 'danger' if vbm.lyme_disease_tier == 'very_high' else 'warning' if vbm.lyme_disease_tier == 'high' else 'info' if vbm.lyme_disease_tier == 'moderate' else 'success' }}">{{ vbm.lyme_disease_tier|default('unknown')|replace('_', ' ')|title }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>West Nile Virus Tier</td>
+                                    <td><span class="badge bg-{{ 'danger' if vbm.west_nile_virus_tier == 'high' else 'warning' if vbm.west_nile_virus_tier == 'moderate' else 'success' }}">{{ vbm.west_nile_virus_tier|default('unknown')|replace('_', ' ')|title }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Forest Cover</td>
+                                    <td>{{ vbm.forest_cover_pct|default(0) }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Deer Density</td>
+                                    <td>{{ vbm.deer_density|default('unknown')|replace('_', ' ')|title }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Outdoor Workforce</td>
+                                    <td>{{ vbm.outdoor_workforce_pct|default(0) }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Current Season Risk</td>
+                                    <td><span class="badge bg-{{ 'danger' if vbm.seasonal_risk_level == 'Peak' else 'warning' if vbm.seasonal_risk_level == 'High' else 'info' if vbm.seasonal_risk_level == 'Moderate' else 'success' }}">{{ vbm.seasonal_risk_level|default('Unknown') }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Climate Trend Impact</td>
+                                    <td>{{ vbm.climate_trend_impact|default('N/A') }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Diseases Assessed</td>
+                                    <td><small>{{ vbm.diseases_assessed|default([])|join(', ') }}</small></td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-muted">Data loading...</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-primary p-2 mt-2">
+                        <small>
+                            <strong>Vector-Borne Disease Preparedness:</strong> 
+                            <ul class="small mt-2 mb-1">
+                                <li>Enhance tick and mosquito surveillance programs</li>
+                                <li>Develop public education on tick bite prevention</li>
+                                <li>Coordinate with WI DHS on Lyme disease reporting</li>
+                                <li>Implement integrated pest management strategies</li>
+                                <li>Monitor climate-driven range expansion of vectors</li>
+                            </ul>
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: WI DHS Tick-Borne Surveillance, CDC ArboNET, USDA Forest Service, WI DNR, CDC SVI
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cybersecurity Risk -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Cybersecurity Risk
+                        <span class="badge bg-secondary ms-2">
+                            Supplementary — Modeled from Proxy Indicators
+                        </span>
+                    </h5>
+                    <div class="alert alert-secondary mt-2 mb-0 py-1 px-2">
+                        <small><i class="fas fa-info-circle me-1"></i>Supplementary domain — not included in overall PHRAT risk score. Presented for comprehensive planning context.</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if risk_data.cybersecurity_risk is defined and risk_data.cybersecurity_risk is number %}
+                            <h3>{{ "%.2f"|format(risk_data.cybersecurity_risk) }}
+                            {% if risk_data.cyber_components is defined %}
+                            {{ show_work_btn('cyber-info', 'Cybersecurity Risk Calculation',
+                            '<div class="formula-line">Score = f(Threat, Vulnerability, Capability)</div>'
+                            ~ '<ul class="component-list">'
+                            ~ '<li>Threat Landscape: ' ~ "%.3f"|format(risk_data.cyber_components.threat) ~ '</li>'
+                            ~ '<li>Vulnerability: ' ~ "%.3f"|format(risk_data.cyber_components.vulnerability) ~ '</li>'
+                            ~ '<li>Capability: ' ~ "%.3f"|format(risk_data.cyber_components.capability) ~ '</li>'
+                            ~ '</ul>'
+                            ~ '<div class="formula-line">+ SVI socioeconomic adj. → ' ~ "%.3f"|format(risk_data.cybersecurity_risk) ~ '</div>'
+                            ~ '<div class="data-source">Sources: FBI IC3, MS-ISAC, CISA, Census Bureau</div>'
+                            ) }}
+                            {% endif %}
+                            </h3>
+                            <span class="badge bg-{{ 'danger' if risk_data.cybersecurity_risk > 0.6 else 'warning' if risk_data.cybersecurity_risk > 0.3 else 'success' }}">
+                                {{ 'High Risk' if risk_data.cybersecurity_risk > 0.6 else 'Medium Risk' if risk_data.cybersecurity_risk > 0.3 else 'Low Risk' }}
+                            </span>
+                        {% else %}
+                            <h3>0.35</h3>
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Risk Component Breakdown -->
+                    {% if risk_data.cyber_components is defined %}
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">Risk Component Analysis</h6>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-danger mb-1">Threat</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.cyber_components.threat) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" style="width: {{ risk_data.cyber_components.threat * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-warning mb-1">Vulnerability</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.cyber_components.vulnerability) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-warning" style="width: {{ risk_data.cyber_components.vulnerability * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded text-center">
+                                        <span class="d-block badge bg-success mb-1">Capability</span>
+                                        <span class="h5">{{ "%.2f"|format(risk_data.cyber_components.capability) }}</span>
+                                        <div class="progress mt-1" style="height: 5px;">
+                                            <div class="progress-bar bg-success" style="width: {{ risk_data.cyber_components.capability * 100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if risk_data.cyber_metrics is defined %}
+                                <tr>
+                                    <td>Reported Breaches (per 100k)</td>
+                                    <td>{{ risk_data.cyber_metrics.reported_breaches if risk_data.cyber_metrics.reported_breaches is defined else "12" }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Cybercrime Reports (per 100k)</td>
+                                    <td>{{ risk_data.cyber_metrics.cybercrime_reports if risk_data.cyber_metrics.cybercrime_reports is defined else "48" }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Critical Vulnerabilities</td>
+                                    <td>{{ risk_data.cyber_metrics.critical_vulnerabilities if risk_data.cyber_metrics.critical_vulnerabilities is defined else "7" }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Average Detection Time (days)</td>
+                                    <td>{{ risk_data.cyber_metrics.detection_time if risk_data.cyber_metrics.detection_time is defined else "15" }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td>Reported Breaches (per 100k)</td>
+                                    <td>12</td>
+                                </tr>
+                                <tr>
+                                    <td>Cybercrime Reports (per 100k)</td>
+                                    <td>48</td>
+                                </tr>
+                                <tr>
+                                    <td>Critical Vulnerabilities</td>
+                                    <td>7</td>
+                                </tr>
+                                <tr>
+                                    <td>Average Detection Time (days)</td>
+                                    <td>15</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-warning p-2 mt-3">
+                        <small>
+                            <strong>Threat Trends:</strong> 
+                            Ransomware, phishing, and supply chain attacks continue to be primary threats to healthcare system infrastructure. Data shows healthcare is increasingly targeted.
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Sources: HHS, FBI IC3, CISA KEV Database
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Weather Refresh Modal -->
+<div class="modal fade" id="weatherRefreshModal" tabindex="-1" aria-labelledby="weatherRefreshModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="weatherRefreshModalLabel">Refreshing Weather Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Fetching the latest weather data...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HERC Region Modal -->
+<div class="modal fade" id="hercModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">HERC Region Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="hercModalContent">
+                <!-- Content will be populated dynamically -->
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WEM Region Modal -->
+<div class="modal fade" id="wemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">WEM Region Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="wemModalContent">
+                <!-- Content will be populated dynamically -->
+                <div class="text-center">
+                    <div class="spinner-border text-danger" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard-specific data for JavaScript -->
+<script>
+window.templateData = {
+    jurisdictionId: '{{ risk_data.jurisdiction_id }}',
+    jurisdictionName: '{{ risk_data.location }}'
+};
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    popoverTriggerList.map(function(el) {
+        return new bootstrap.Popover(el, {
+            container: 'body',
+            sanitize: false
+        });
+    });
+});
+</script>
+
+<!-- GIS Export Function for Individual Jurisdiction -->
+<script>
+function exportSingleJurisdiction(jurisdictionId) {
+    const exportMenu = `
+        <div class="dropdown">
+            <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-download me-1"></i>Export Options
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/api/gis/export/jurisdiction/${jurisdictionId}?format=csv">
+                    <i class="fas fa-table me-2"></i>Download CSV
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" onclick="exportAllJurisdictions(); return false;">
+                    <i class="fas fa-map-marked-alt me-2"></i>Export All Wisconsin Data
+                </a></li>
+            </ul>
+        </div>
+    `;
+    event.target.outerHTML = exportMenu;
+}
+
+function exportAllJurisdictions() {
+    window.location.href = '/#gis-export-tab';
+    setTimeout(() => {
+        const gisTab = document.getElementById('gis-export-tab');
+        if (gisTab) {
+            gisTab.click();
+        }
+    }, 100);
+}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM loaded - initializing dashboard
+    try {
+        // Store risk data globally
+        window.riskData = {{ risk_data|tojson }};
+        
+        if (!window.riskData) {
+            console.warn("No risk data available for this jurisdiction");
+            const noDataAlert = document.createElement('div');
+            noDataAlert.className = 'alert alert-warning mb-4';
+            noDataAlert.innerHTML = '<strong>Data Unavailable</strong><p>Risk assessment data is not currently available for this jurisdiction. Please try again later or select a different jurisdiction.</p>';
+            const container = document.querySelector('.container-fluid');
+            if (container) { container.insertBefore(noDataAlert, container.firstChild); }
+            return;
+        }
+        
+        let riskData = window.riskData;
+    
+
+    
+    } catch (error) {
+        console.error("Failed to initialize dashboard:", error);
+        // Display a general error message at the top of the page
+        const alertBox = document.createElement('div');
+        alertBox.className = 'alert alert-danger alert-dismissible fade show mb-4';
+        alertBox.innerHTML = `
+            <strong>Dashboard Error</strong> 
+            <p>There was a problem loading the risk assessment dashboard. The data may be incomplete or unavailable.</p>
+            <p>Please try selecting a different jurisdiction or contact support.</p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+            container.insertBefore(alertBox, container.firstChild);
+        }
+    }
+});
+
+// Setup HERC and WEM modal handlers
+// These functions are called from the map.js when region buttons are clicked
+function showHercStats(regionId) {
+    fetch(`/api/herc-region/${regionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error:', data.error);
+                return;
+            }
+            
+            const regionData = data.data || data;
+            const modalContent = document.getElementById('hercModalContent');
+            const modalEl = document.getElementById('hercModal');
+            const modalTitle = modalEl.querySelector('.modal-title');
+            
+            modalTitle.innerHTML = `HERC Region ${regionId}: ${regionData.name || data.name}`;
+            
+            let content = `
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Counties in Region</h6>
+                        <p>${(regionData.counties || data.counties || []).join(', ')}</p>
+                    </div>
+                </div>
+            `;
+            
+            modalContent.innerHTML = content;
+            
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+function closeHercStats() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('hercModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
+function showWemStats(regionId) {
+    fetch(`/api/wem-region/${regionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error:', data.error);
+                return;
+            }
+            
+            const regionData = data.data || data;
+            const modalContent = document.getElementById('wemModalContent');
+            const modalEl = document.getElementById('wemModal');
+            const modalTitle = modalEl.querySelector('.modal-title');
+            
+            modalTitle.innerHTML = `WEM Region ${regionId}: ${regionData.name || data.name}`;
+            
+            let content = '<div class="row"><div class="col-12"><h6>Counties in Region</h6><p>' +
+                (regionData.counties || data.counties || []).join(', ') + '</p></div></div>';
+
+            const declarations = regionData.recent_declarations || data.recent_declarations;
+            if (declarations && declarations.length > 0) {
+                content += '<div class="row mt-3"><div class="col-12"><h6>Recent Emergency Declarations</h6><ul class="list-group">';
+                declarations.forEach(function(declaration) {
+                    content += '<li class="list-group-item"><div class="d-flex w-100 justify-content-between"><h6 class="mb-1">' +
+                        declaration.type + '</h6><small>' + declaration.date + '</small></div><p class="mb-1">' +
+                        declaration.description + '</p></li>';
+                });
+                content += '</ul></div></div>';
+            }
+            
+            modalContent.innerHTML = content;
+            
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+function closeWemStats() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('wemModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+</script>
+{% endblock %}
