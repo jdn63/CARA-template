@@ -65,6 +65,12 @@
             "refresh_interval_hours": 168,
             "module": "utils.data_source_refresher",
             "function": "refresh_all_nid_dam_inventory"
+        },
+        "dhs_vbd_surveillance": {
+            "description": "WI DHS EPHT vector-borne disease surveillance - county-level Lyme/WNV CSV data from dhs.wisconsin.gov/epht (weekly refresh)",
+            "refresh_interval_hours": 168,
+            "module": "utils.vbd_data_fetcher",
+            "function": "refresh_all_dhs_vbd_surveillance"
         }
     }
 }
