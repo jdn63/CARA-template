@@ -1,0 +1,754 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 style="color: var(--primary-blue, #1f4788);">Risk Assessment Methodology</h1>
+        <div class="btn-group">
+            <a href="/" class="btn btn-outline-primary">Home</a>
+            <a href="javascript:void(0);" onclick="goToDashboard()" class="btn btn-outline-secondary">Dashboard</a>
+        </div>
+    </div>
+
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#overview">Overview</a></li>
+            <li class="breadcrumb-item"><a href="#data-sources">Data Sources</a></li>
+            <li class="breadcrumb-item"><a href="#overall-risk">Overall Risk Score</a></li>
+            <li class="breadcrumb-item"><a href="#evr-framework">EVR Framework</a></li>
+            <li class="breadcrumb-item"><a href="#natural-hazards">Natural Hazards</a></li>
+            <li class="breadcrumb-item"><a href="#health-metrics">Health Metrics</a></li>
+            <li class="breadcrumb-item"><a href="#active-shooter">Active Shooter</a></li>
+            <li class="breadcrumb-item"><a href="#extreme-heat">Extreme Heat</a></li>
+            <li class="breadcrumb-item"><a href="#utilities">Utilities</a></li>
+            <li class="breadcrumb-item"><a href="#cybersecurity">Cybersecurity</a></li>
+            <li class="breadcrumb-item"><a href="#air-quality">Air Quality</a></li>
+            <li class="breadcrumb-item"><a href="#svi-integration">SVI Integration</a></li>
+            <li class="breadcrumb-item"><a href="#temporal-framework">Temporal Framework</a></li>
+            <li class="breadcrumb-item"><a href="#phep-integration">PHEP Integration</a></li>
+        </ol>
+    </nav>
+
+    <div class="alert alert-success mb-4" id="overview">
+        <h4 class="alert-heading" style="color: var(--primary-blue, #1f4788);">Comprehensive Wisconsin Coverage</h4>
+        <p>CARA provides risk assessments for <strong>95 unique public health departments</strong> (101 total jurisdiction entries including multi-county secondary mappings) across the state of Wisconsin, organized into <strong>7 Healthcare Emergency Readiness Coalition (HERC) regions</strong>.</p>
+        <div class="row">
+            <div class="col-md-6">
+                <ul class="mb-0">
+                    <li><strong>84</strong> local health departments</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul class="mb-0">
+                    <li><strong>11</strong> federally-recognized tribal nations</li>
+                </ul>
+            </div>
+        </div>
+        <p class="mt-2 mb-0 small">Each jurisdiction is assessed across 5 primary risk domains using the PHRAT quadratic mean formula to produce an overall risk score, with 2 supplementary domains (Utilities and Cybersecurity) presented for comprehensive planning context.</p>
+    </div>
+
+    <div class="card mb-4" id="data-sources">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Data Sources</h2>
+        </div>
+        <div class="card-body">
+            <p>All risk calculations are grounded in publicly available, authoritative data sources. The table below lists every data source used, its refresh cadence, and what it provides.</p>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data Source</th>
+                            <th>Refresh Cadence</th>
+                            <th>Used For</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>FEMA National Risk Index (NRI)</strong></td>
+                            <td><span class="badge bg-success">Annual (365-day cache)</span></td>
+                            <td>Flood, tornado, winter storm exposure scores; health impact factors</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CDC Social Vulnerability Index (SVI)</strong></td>
+                            <td><span class="badge bg-success">Annual (365-day cache)</span></td>
+                            <td>4 vulnerability themes integrated into EVR framework across all domains</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Wisconsin DHS Respiratory Surveillance PDFs</strong> (p02346 series)</td>
+                            <td><span class="badge bg-info text-dark">Weekly</span></td>
+                            <td>Flu, COVID-19, RSV activity levels extracted via pypdf</td>
+                        </tr>
+                        <tr>
+                            <td><strong>County Health Rankings</strong></td>
+                            <td><span class="badge bg-success">Annual</span></td>
+                            <td>Vaccination rates (flu, COVID, MMR, pediatric)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NOAA NCEI Storm Events Database</strong></td>
+                            <td><span class="badge bg-info text-dark">Weekly (scheduler cache)</span></td>
+                            <td>County-level tornado, flood, winter storm, thunderstorm event counts, property damage, injuries, fatalities from bulk CSV data</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenFEMA Disaster Declarations Summaries v2</strong></td>
+                            <td><span class="badge bg-info text-dark">Weekly (scheduler cache)</span></td>
+                            <td>Federal disaster declarations for Wisconsin counties; flood, tornado, winter storm, thunderstorm declaration counts</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenFEMA NFIP Redacted Claims v2</strong></td>
+                            <td><span class="badge bg-info text-dark">Weekly (scheduler cache)</span></td>
+                            <td>National Flood Insurance Program claims by county; total payments and claim counts for flood risk</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenFEMA Hazard Mitigation Assistance Projects v4</strong></td>
+                            <td><span class="badge bg-info text-dark">Weekly (scheduler cache)</span></td>
+                            <td>Hazard mitigation project data for Wisconsin counties; project counts and federal obligations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Census ACS Demographics</strong></td>
+                            <td><span class="badge bg-success">Annual</span></td>
+                            <td>Population aged 65+ (%), mobile home %, population density for vulnerability calculations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Climate Projection Data</strong> (NOAA/IPCC AR6/WICCI/EPA)</td>
+                            <td><span class="badge bg-secondary">Static</span></td>
+                            <td>Climate zone multipliers in JSON data files for natural hazards and heat projections</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gun Violence Archive (GVA) 2023</strong></td>
+                            <td><span class="badge bg-secondary">Static</span></td>
+                            <td>Mass shooting incident data for active shooter risk</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NCES SSOCS 2019-2020</strong></td>
+                            <td><span class="badge bg-secondary">Static</span></td>
+                            <td>School safety survey data for active shooter risk</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Wisconsin Tribal Boundaries</strong></td>
+                            <td><span class="badge bg-secondary">Static</span></td>
+                            <td>GeoJSON boundary data for 11 federally-recognized tribal nations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EPA AirNow API</strong></td>
+                            <td><span class="badge bg-info text-dark">Daily (scheduler cache)</span></td>
+                            <td>Air quality index readings; cache-only mode populated by background scheduler</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert alert-warning mb-0 mt-3">
+                <strong>Data Transparency:</strong> The Cybersecurity and Utilities risk domains are <strong>modeled from proxy indicators</strong> derived from county characteristics and SVI data, not real-time external APIs. These supplementary domains are not included in the primary PHRAT risk score. All proxy-indicator-based components are transparently labeled throughout this methodology.
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="overall-risk">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Overall Risk Score (PHRAT Quadratic Mean)</h2>
+        </div>
+        <div class="card-body">
+            <p>The overall risk score for each jurisdiction is calculated using the <strong>Public Health Risk Assessment Tool (PHRAT) quadratic mean formula</strong>. This approach prevents a high risk score in one domain from being diluted by low scores in others.</p>
+            <div class="alert alert-info">
+                <p class="font-monospace mb-2"><strong>Overall Risk = √(w₁ × Risk₁² + w₂ × Risk₂² + ... + w₅ × Risk₅²)</strong></p>
+                <p class="mb-0 small">Where w<sub>i</sub> are the domain weights and Risk<sub>i</sub> are individual domain scores (0.0 to 1.0).</p>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Risk Domain</th>
+                            <th>Weight</th>
+                            <th>Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Natural Hazards</td><td><strong>33%</strong></td><td class="small">Highest annualized expected losses in WI per FEMA NRI; covers 4 sub-types (flood, tornado, winter storm, thunderstorm)</td></tr>
+                        <tr><td>Health Metrics</td><td><strong>20%</strong></td><td class="small">Core CDC PHEP capability; infectious disease has comparable community-wide impact to active shooter events</td></tr>
+                        <tr><td>Active Shooter</td><td><strong>20%</strong></td><td class="small">CDC/ASPR identifies as high-consequence threat requiring dedicated PHEP planning</td></tr>
+                        <tr><td>Extreme Heat</td><td><strong>13%</strong></td><td class="small">Leading weather-related cause of death nationally (NOAA); tempered by WI's northern latitude</td></tr>
+                        <tr><td>Air Quality</td><td><strong>14%</strong></td><td class="small">Growing impact from increasing wildfire smoke episodes (EPA); geographically uneven across WI</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light"><td><strong>Total</strong></td><td><strong>100%</strong></td><td></td></tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="alert alert-info mt-2 mb-3">
+                <strong>Weight sources:</strong> Domain weights are informed by FEMA National Risk Index annualized expected loss data for Wisconsin, CDC PHEP capability priorities, Wisconsin DHS Hazard Vulnerability Assessment guidance, and historical disaster declaration frequency (FEMA, 2000-2024). These weights are configurable — jurisdictions may adjust them in <code>config/risk_weights.yaml</code> based on local hazard profiles and planning priorities.
+            </div>
+            <div class="alert alert-secondary mt-3">
+                <strong>Supplementary Domains:</strong> Utilities and Cybersecurity are assessed separately as supplementary domains modeled from proxy indicators. They are not included in the primary PHRAT score but are presented for comprehensive planning context.
+            </div>
+            <p class="small mb-0"><strong>Why quadratic mean?</strong> Unlike a simple weighted average, the quadratic mean (root mean square) gives greater emphasis to higher-risk domains. A jurisdiction with one domain at 0.9 risk will score meaningfully higher than one where all domains sit at 0.4, even if the weighted averages would be similar.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="evr-framework">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Residual Risk Formula (EVR Framework)</h2>
+        </div>
+        <div class="card-body">
+            <p>Individual risk domains are calculated using the <strong>Exposure-Vulnerability-Resilience (EVR)</strong> framework. This formula is applied consistently across natural hazards, utilities, and extreme heat domains.</p>
+            <div class="alert alert-info">
+                <p class="font-monospace mb-0"><strong>Residual Risk = (Exposure × Vulnerability) × (2.0 - Resilience) × Health Impact Factor</strong></p>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Component Definitions</h6>
+                    <ul>
+                        <li><strong>Exposure (0&ndash;1):</strong> Hazard likelihood based on historical data and geographic factors</li>
+                        <li><strong>Vulnerability (0&ndash;1):</strong> Population and infrastructure susceptibility; incorporates CDC SVI themes and Census demographics</li>
+                        <li><strong>Resilience (0&ndash;1):</strong> Community adaptive capacity; acts as an <em>amplifier</em> rather than a simple divisor</li>
+                        <li><strong>Health Impact Factor (0.8&ndash;1.5):</strong> Derived from FEMA NRI data; adjusts for health consequences of the specific hazard</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Resilience as Amplifier</h6>
+                    <p>The <span class="font-monospace">(2.0 - Resilience)</span> term means:</p>
+                    <ul>
+                        <li>Low resilience (0.1) &rarr; <strong>1.9&times;</strong> amplifier</li>
+                        <li>Medium resilience (0.5) &rarr; <strong>1.5&times;</strong> amplifier</li>
+                        <li>High resilience (0.9) &rarr; <strong>1.1&times;</strong> amplifier</li>
+                    </ul>
+                    <p class="small mb-0">This ensures that resilience never fully eliminates risk, but communities with lower resilience face meaningfully amplified risk scores.</p>
+                </div>
+            </div>
+            <hr>
+            <h6>Risk Level Categories</h6>
+            <div class="d-flex gap-3">
+                <span class="badge bg-secondary px-3 py-2">0.0 &ndash; 0.2: Very Low</span>
+                <span class="badge bg-success px-3 py-2">0.2 &ndash; 0.4: Low</span>
+                <span class="badge bg-warning text-dark px-3 py-2">0.4 &ndash; 0.7: Moderate</span>
+                <span class="badge bg-danger px-3 py-2">0.7 &ndash; 1.0: High</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="natural-hazards">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Natural Hazards Domain (33% of Overall)</h2>
+        </div>
+        <div class="card-body">
+            <p>The natural hazards score is the <strong>equal-weighted average</strong> of four hazard types, each calculated using the EVR framework described above.</p>
+            <div class="table-responsive">
+                <table class="table table-bordered text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Flood</th>
+                            <th>Tornado</th>
+                            <th>Winter Storm</th>
+                            <th>Thunderstorm</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>25%</td>
+                            <td>25%</td>
+                            <td>25%</td>
+                            <td>25%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h6>EVR Components by Hazard</h6>
+            <ul>
+                <li><strong>Exposure:</strong> FEMA NRI hazard scores with climate change projection multipliers from <code>data/climate/natural_hazard_climate_projections.json</code></li>
+                <li><strong>Vulnerability:</strong> All 4 CDC SVI themes with hazard-specific calibrated weights, plus Census ACS demographics (population aged 65+ (%), mobile home %, population density)</li>
+                <li><strong>Resilience:</strong> Socioeconomic capacity and infrastructure factors</li>
+            </ul>
+
+            <h6 class="mt-3">SVI Vulnerability Weights by Hazard Type</h6>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Factor</th>
+                            <th>Flood</th>
+                            <th>Tornado</th>
+                            <th>Winter Storm</th>
+                            <th>Thunderstorm</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SVI: Housing/Transportation</td>
+                            <td>30%</td>
+                            <td>25%</td>
+                            <td>20%</td>
+                            <td>25%</td>
+                        </tr>
+                        <tr>
+                            <td>SVI: Socioeconomic Status</td>
+                            <td>20%</td>
+                            <td>15%</td>
+                            <td>10%</td>
+                            <td>10%</td>
+                        </tr>
+                        <tr>
+                            <td>SVI: Household Composition</td>
+                            <td>15%</td>
+                            <td>10%</td>
+                            <td>15%</td>
+                            <td>10%</td>
+                        </tr>
+                        <tr>
+                            <td>SVI: Minority Status</td>
+                            <td>10%</td>
+                            <td>10%</td>
+                            <td>5%</td>
+                            <td>5%</td>
+                        </tr>
+                        <tr>
+                            <td>Census: Population Aged 65+ (%)</td>
+                            <td>15%</td>
+                            <td>10%</td>
+                            <td>20%</td>
+                            <td>10%</td>
+                        </tr>
+                        <tr>
+                            <td>Census: Mobile Home %</td>
+                            <td>10%</td>
+                            <td>25%</td>
+                            <td>5%</td>
+                            <td>10%</td>
+                        </tr>
+                        <tr>
+                            <td>Census: Population Density</td>
+                            <td>&mdash;</td>
+                            <td>5%</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td>Power Grid Vulnerability</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>15%</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td>Rural Isolation</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>10%</td>
+                            <td>&mdash;</td>
+                        </tr>
+                        <tr>
+                            <td>Flood Susceptibility</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>15%</td>
+                        </tr>
+                        <tr>
+                            <td>Tree Coverage</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>&mdash;</td>
+                            <td>15%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h6 class="mt-3">Climate Change Projections</h6>
+            <p>Wisconsin is divided into <strong>3 climate zones</strong> (Southern, Central, Northern) with RCP4.5/SSP2-4.5 scenario projections applied as exposure multipliers:</p>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Hazard Type</th>
+                            <th>Projected Change Range</th>
+                            <th>Source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Flood</td><td>+15% to +25%</td><td>NOAA/WICCI</td></tr>
+                        <tr><td>Tornado</td><td>+8% to +15%</td><td>NOAA/IPCC AR6</td></tr>
+                        <tr><td>Winter Storm</td><td>+5% to +12%</td><td>NOAA/IPCC AR6</td></tr>
+                        <tr><td>Thunderstorm</td><td>+12% to +22%</td><td>EPA/NOAA</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mb-0 mt-2">
+                <strong>Thunderstorm Independence:</strong> Thunderstorm risk is calculated independently using the <strong>NOAA Storm Events Database</strong> county-level severity index from <code>data/climate/thunderstorm_severity_by_county.json</code>, rather than being derived from tornado data.
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="health-metrics">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Health Metrics Domain (20% of Overall)</h2>
+        </div>
+        <div class="card-body">
+            <p>Health metrics risk is based on respiratory disease surveillance data from Wisconsin DHS and vaccination coverage from County Health Rankings.</p>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Component</th>
+                            <th>Weight</th>
+                            <th>Data Source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Influenza Activity</td><td><strong>30%</strong></td><td>Wisconsin DHS Respiratory Surveillance PDFs</td></tr>
+                        <tr><td>COVID-19 Activity</td><td><strong>30%</strong></td><td>Wisconsin DHS Respiratory Surveillance PDFs</td></tr>
+                        <tr><td>RSV Activity</td><td><strong>20%</strong></td><td>Wisconsin DHS Respiratory Surveillance PDFs</td></tr>
+                        <tr><td>Vaccination Rate</td><td><strong>20%</strong></td><td>County Health Rankings</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <h6>Calculation Method</h6>
+            <ul>
+                <li><strong>Disease activity:</strong> Risk scores are calculated from <code>cases_per_100k</code> using sigmoid normalization, producing a 0&ndash;1 score that responds proportionally at low case counts and saturates at high counts.</li>
+                <li><strong>Vaccination coverage:</strong> Uses a strategic framework weighting flu vaccination (30%), COVID vaccination (30%), MMR (25%), and pediatric vaccination (15%). Lower coverage yields higher risk.</li>
+            </ul>
+            <p class="small mb-0">Wisconsin DHS PDFs are extracted weekly via pypdf, providing statewide activity levels that inform county-level risk estimates.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="active-shooter">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Active Shooter Domain (20% of Overall)</h2>
+        </div>
+        <div class="card-body">
+            <p>The active shooter domain evaluates population-level environmental and social indicators correlated with elevated risk conditions. This framework is intended for public health preparedness planning, not individual threat assessment.</p>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sub-Domain</th>
+                            <th>Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Historical Incident Density</td><td><strong>25%</strong></td></tr>
+                        <tr><td>School &amp; Youth Vulnerability</td><td><strong>20%</strong></td></tr>
+                        <tr><td>Social &amp; Community Fragility</td><td><strong>20%</strong></td></tr>
+                        <tr><td>Mental &amp; Behavioral Health Risk</td><td><strong>20%</strong></td></tr>
+                        <tr><td>Access to Lethal Means</td><td><strong>15%</strong></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p><strong>Data Sources:</strong> Gun Violence Archive (GVA), FBI Crime Data API, NCES SSOCS 2019-2020, Census ACS, CDC SVI.</p>
+            <div class="alert alert-warning mb-0">
+                <strong>API Availability:</strong> When the FBI Crime Data API is unavailable, the affected sub-domain returns 0.0 rather than using fallback or estimated data.
+                <br>
+                <a href="/active-shooter-methodology" class="alert-link mt-1 d-inline-block">View detailed Active Shooter methodology &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="extreme-heat">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Extreme Heat Domain (13% of Overall)</h2>
+        </div>
+        <div class="card-body">
+            <p>Extreme heat risk combines the EVR residual risk calculation with wet bulb temperature and climate trend adjustments.</p>
+            <h6>Five Components</h6>
+            <ol>
+                <li><strong>Exposure:</strong> Historical heat event frequency and geographic heat island factors</li>
+                <li><strong>Vulnerability:</strong> CDC SVI themes, population aged 65+ (%), outdoor worker density</li>
+                <li><strong>Resilience:</strong> Cooling center access, healthcare capacity, community preparedness</li>
+                <li><strong>Wet Bulb Temperature:</strong> Humidity-adjusted temperature danger thresholds</li>
+                <li><strong>Climate Trend:</strong> Long-term warming trajectory for the jurisdiction</li>
+            </ol>
+            <div class="alert alert-info">
+                <p class="font-monospace mb-1"><strong>Heat Risk = calculate_residual_risk(exposure, vulnerability, resilience)</strong></p>
+                <p class="font-monospace mb-0"><strong>&nbsp;&nbsp;adjusted by wet_bulb_factor and climate_trend_factor</strong></p>
+            </div>
+            <h6>Climate Adjustments (NOAA/IPCC)</h6>
+            <ul>
+                <li><strong>40% increase</strong> in heat event frequency by 2050 (RCP4.5)</li>
+                <li><strong>2&ndash;4&deg;F warming</strong> projected for Wisconsin by 2050</li>
+                <li><strong>60% increase</strong> in heat wave duration (IPCC AR6)</li>
+            </ul>
+            <p class="small mb-0"><strong>Data Sources:</strong> NOAA climate summaries, EPA heat island reports, CDC SVI, WICCI 2021 Assessment.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="utilities">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Utilities Domain (Supplementary Assessment)</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <strong>Transparency Note:</strong> This domain is <strong>modeled from proxy indicators</strong> derived from county characteristics and CDC SVI data. It does not rely on real-time external utility monitoring APIs.
+                <ul class="mb-0 mt-2 small">
+                    <li><strong>Exposure proxies:</strong> County geographic position, population density (Census ACS 2022), and utility service territory maps (WI PSC)</li>
+                    <li><strong>Vulnerability proxies:</strong> CDC SVI housing/transportation and socioeconomic themes; Census ACS poverty rate and percentage of population aged 65+</li>
+                    <li><strong>Resilience proxies:</strong> County urbanization level (Census) as proxy for redundant infrastructure and restoration capacity</li>
+                </ul>
+            </div>
+            <div class="alert alert-secondary">
+                <strong>Supplementary Domain:</strong> Utilities is not included in the primary PHRAT risk score. It is presented as a supplementary assessment for comprehensive planning context.
+            </div>
+            <p>Four components are assessed, each using the EVR framework:</p>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Component</th>
+                            <th>Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Electrical Outage Risk</td><td><strong>30%</strong></td></tr>
+                        <tr><td>Utilities Disruption Risk</td><td><strong>30%</strong></td></tr>
+                        <tr><td>Supply Chain Risk</td><td><strong>20%</strong></td></tr>
+                        <tr><td>Fuel Shortage Risk</td><td><strong>20%</strong></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="small mb-0">Exposure, vulnerability, and resilience for each component are modeled based on county infrastructure characteristics, population density, geographic factors, and SVI vulnerability themes.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="cybersecurity">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Cybersecurity Domain (Supplementary Assessment)</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <strong>Transparency Note:</strong> This domain is <strong>modeled from proxy indicators</strong> derived from county characteristics and CDC SVI socioeconomic adjustments. It is <em>not</em> based on real-time threat intelligence, breach databases, or cybersecurity incident feeds.
+                <ul class="mb-0 mt-2 small">
+                    <li><strong>Threat proxies:</strong> Population size (Census ACS 2022) as proxy for target visibility; institutional presence from WI Blue Book (government, healthcare, finance)</li>
+                    <li><strong>Vulnerability proxies:</strong> County per-capita revenue (WI DOR 2022) as proxy for IT modernization budget; urban/rural classification (Census); CDC SVI socioeconomic theme</li>
+                    <li><strong>Capability proxies:</strong> County government staffing levels (WI DOR 2022) and urbanization as proxy for access to IT security specialists</li>
+                </ul>
+            </div>
+            <div class="alert alert-secondary">
+                <strong>Supplementary Domain:</strong> Cybersecurity is not included in the primary PHRAT risk score. It is presented as a supplementary assessment for comprehensive planning context.
+            </div>
+            <p>The cybersecurity risk score models the relative exposure of public health infrastructure to cyber threats based on three components:</p>
+            <ul>
+                <li><strong>Threat Landscape (35%):</strong> County population size and institutional presence as proxy for target visibility</li>
+                <li><strong>Vulnerability (40%):</strong> County fiscal resources as proxy for IT infrastructure age, adjusted by CDC SVI socioeconomic factor (up to <strong>25%</strong> increase for more vulnerable jurisdictions)</li>
+                <li><strong>Capability (25%):</strong> County staffing and urbanization as proxy for organizational security readiness (inverted: higher capability = lower risk)</li>
+            </ul>
+            <div class="alert alert-danger mt-3">
+                <strong>Methodological Limitation — Potential Socioeconomic Bias:</strong> The CDC SVI socioeconomic adjustment (up to 25% increase) assumes that lower-income communities have fewer IT security resources. This is a <strong>proxy assumption without direct empirical validation</strong> — no published study links county-level SVI percentiles to cybersecurity breach rates. This adjustment may embed socioeconomic bias by systematically scoring lower-income jurisdictions as higher cybersecurity risk. Users should interpret cybersecurity scores with this limitation in mind. The SVI adjustment factor is configurable in <code>config/risk_weights.yaml</code> and can be set to 0.0 to disable SVI influence entirely.
+            </div>
+            <p class="small mb-0">This domain is included to support comprehensive preparedness planning. Jurisdictions seeking detailed cyber risk assessments should consult CISA resources and conduct dedicated cybersecurity evaluations.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="air-quality">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Air Quality Domain (14% of Overall)</h2>
+        </div>
+        <div class="card-body">
+            <p>Air quality risk combines current EPA AirNow data with strategic climate projections to assess long-term environmental health planning needs.</p>
+            <h6>Components</h6>
+            <ul>
+                <li><strong>Current AQI Baseline:</strong> EPA AirNow API data, retrieved via background scheduler and served from cache</li>
+                <li><strong>Climate Projections:</strong> 40% ozone increase and 110% wildfire smoke increase projected by 2050</li>
+                <li><strong>Strategic Assessment:</strong> 5-year historical baseline patterns integrated with forward-looking projections</li>
+            </ul>
+            <div class="alert alert-info mb-0">
+                <strong>Tribal Jurisdictions:</strong> Multi-point sampling is used for geographically distributed tribal jurisdictions to ensure representative air quality coverage across their boundaries.
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="svi-integration">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">CDC Social Vulnerability Index (SVI) Integration</h2>
+        </div>
+        <div class="card-body">
+            <p>The CDC/ATSDR Social Vulnerability Index is integrated throughout CARA as a core component of vulnerability assessment.</p>
+            <h6>Four SVI Themes</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ol>
+                        <li><strong>Socioeconomic Status</strong> &mdash; poverty, unemployment, housing cost burden, education, health insurance</li>
+                        <li><strong>Household Composition &amp; Disability</strong> &mdash; age 65+, age 17 and under, disability, single-parent households</li>
+                    </ol>
+                </div>
+                <div class="col-md-6">
+                    <ol start="3">
+                        <li><strong>Minority Status &amp; Language</strong> &mdash; racial/ethnic minority, limited English proficiency</li>
+                        <li><strong>Housing Type &amp; Transportation</strong> &mdash; multi-unit housing, mobile homes, crowding, no vehicle, group quarters</li>
+                    </ol>
+                </div>
+            </div>
+            <h6 class="mt-2">How SVI Is Used</h6>
+            <ul>
+                <li><strong>Natural Hazards:</strong> Integrated directly into the EVR vulnerability component with hazard-specific calibrated weights (see <a href="#natural-hazards">Natural Hazards</a> section)</li>
+                <li><strong>Other Domains:</strong> Applied as adjustment factors to modulate risk based on community vulnerability characteristics</li>
+            </ul>
+            <p class="small mb-0">SVI data is sourced from the CDC/ATSDR SVI API with a 365-day cache, providing county-level percentile rankings for each theme.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="temporal-framework">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Temporal Framework (BSTA)</h2>
+        </div>
+        <div class="card-body">
+            <p>CARA uses a <strong>Baseline-Seasonal-Trend-Acute (BSTA)</strong> temporal framework to weight risk factors according to their time horizon. In strategic planning mode, long-term structural risks receive the highest emphasis.</p>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Component</th>
+                            <th>Weight</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Baseline</strong></td>
+                            <td><strong>60%</strong></td>
+                            <td>Long-term structural risks (1&ndash;10 year horizon)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Seasonal</strong></td>
+                            <td><strong>25%</strong></td>
+                            <td>Predictable cyclical variations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trend</strong></td>
+                            <td><strong>15%</strong></td>
+                            <td>Medium-term directional changes calculated from real data: NOAA Storm Events (event frequency trends over 10-20 years), OpenFEMA NFIP claims, NOAA/WICCI/IPCC climate projections, and Census ACS demographic aging trends. Not applicable to infectious disease (see Acute).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Acute</strong></td>
+                            <td><strong>0% / 15%</strong></td>
+                            <td>0% weight for most domains in strategic planning mode. Exception: Infectious disease uses 15% acute weight based on WI DHS respiratory surveillance data (flu, COVID-19, RSV activity levels and vaccination coverage).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <h6>Seasonal Patterns by Hazard</h6>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Hazard</th>
+                            <th>Peak Season</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Flood</td><td>Spring (March&ndash;May)</td></tr>
+                        <tr><td>Tornado</td><td>Late Spring / Summer (May&ndash;August)</td></tr>
+                        <tr><td>Winter Storm</td><td>Winter (November&ndash;March)</td></tr>
+                        <tr><td>Thunderstorm</td><td>Summer (June&ndash;August)</td></tr>
+                        <tr><td>Extreme Heat</td><td>Summer (June&ndash;September)</td></tr>
+                        <tr><td>Respiratory Illness</td><td>Fall / Winter (October&ndash;March)</td></tr>
+                        <tr><td>Air Quality (Wildfire Smoke)</td><td>Summer / Early Fall (June&ndash;October)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="phep-integration">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">CDC Public Health Emergency Preparedness (PHEP) Capabilities Integration</h2>
+        </div>
+        <div class="card-body">
+            <p>CARA aligns with the CDC's Public Health Emergency Preparedness (PHEP) Cooperative Agreement 2024-2028. All risk assessment results, action plans, and preparedness recommendations support the following PHEP capabilities:</p>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card border-primary mb-3">
+                        <div class="card-header bg-primary text-white">Foundational Capabilities</div>
+                        <div class="card-body">
+                            <ol class="mb-0">
+                                <li><strong>Community Preparedness</strong> &mdash; Building community resilience through risk-informed planning</li>
+                                <li><strong>Community Recovery</strong> &mdash; Supporting recovery operations for public health systems</li>
+                                <li><strong>Emergency Operations Coordination</strong> &mdash; Establishing effective incident command structures</li>
+                                <li><strong>Emergency Public Information and Warning</strong> &mdash; Facilitating timely information exchange</li>
+                                <li><strong>Information Sharing</strong> &mdash; Maintaining situational awareness across partners</li>
+                                <li><strong>Responder Safety and Health</strong> &mdash; Protecting public health workforce</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-primary mb-3">
+                        <div class="card-header bg-primary text-white">Incident-Specific Capabilities</div>
+                        <div class="card-body">
+                            <ol start="7" class="mb-0">
+                                <li><strong>Medical Countermeasure Dispensing and Administration</strong></li>
+                                <li><strong>Medical Materiel Management and Distribution</strong></li>
+                                <li><strong>Medical Surge</strong> &mdash; Supporting healthcare systems during crises</li>
+                                <li><strong>Nonpharmaceutical Interventions</strong> &mdash; Implementing community mitigation strategies</li>
+                                <li><strong>Public Health Laboratory Testing</strong> &mdash; Identifying biological and chemical threats</li>
+                                <li><strong>Public Health Surveillance and Epidemiological Investigation</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h5 class="mt-3">PHEP Capability Implementation in Risk Assessment and Action Planning</h5>
+            <p>For each risk type, specific PHEP capabilities are identified and integrated into a three-phase implementation approach:</p>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Implementation Phase</th>
+                            <th>Timeframe</th>
+                            <th>PHEP Capability Focus</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge bg-danger">Immediate</span></td>
+                            <td>0&ndash;30 days</td>
+                            <td>
+                                <ul class="mb-0">
+                                    <li>Emergency Operations Coordination</li>
+                                    <li>Emergency Public Information and Warning</li>
+                                    <li>Community Preparedness</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-warning text-dark">Short-term</span></td>
+                            <td>1&ndash;3 months</td>
+                            <td>
+                                <ul class="mb-0">
+                                    <li>Information Sharing</li>
+                                    <li>Medical Countermeasure Dispensing</li>
+                                    <li>Public Health Surveillance</li>
+                                    <li>Responder Safety and Health</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-success">Long-term</span></td>
+                            <td>3&ndash;12 months</td>
+                            <td>
+                                <ul class="mb-0">
+                                    <li>Community Recovery</li>
+                                    <li>Public Health Laboratory Testing</li>
+                                    <li>Medical Surge</li>
+                                    <li>Medical Materiel Management</li>
+                                </ul>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mb-0 mt-3">
+                <strong>PHEP Cooperative Agreement Alignment:</strong> The action plans generated by CARA are designed to help local and Tribal health departments meet the requirements of the CDC PHEP Cooperative Agreement 2024-2028. Each recommendation is tied to specific PHEP capabilities and can be directly incorporated into jurisdictional preparedness plans and funding applications.
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center text-muted py-4">
+        <p class="mb-1"><strong>Last Updated:</strong> February 2026</p>
+        <p class="mb-0">
+            <a href="/active-shooter-methodology">Detailed Active Shooter Methodology</a>
+        </p>
+    </div>
+
+</div>
+{% endblock %}
