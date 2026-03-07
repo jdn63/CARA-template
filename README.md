@@ -1,119 +1,221 @@
-# CARA - Comprehensive Automated Risk Assessment (Template)
+# CARA - Comprehensive Automated Risk Assessment
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/flask-2.3+-green.svg)](https://flask.palletsprojects.com/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-A generalized template for building comprehensive geospatial health and emergency preparedness risk assessment platforms. Designed to be adapted by any jurisdiction -- state, county, tribal nation, or international context.
+A comprehensive, open-source geospatial health and emergency preparedness risk assessment platform. CARA is designed as a **template** that any public health jurisdiction can adapt and deploy for their own multi-domain risk scoring, data integration, and preparedness planning needs.
 
-This repository is a starting point. It includes 5 example placeholder jurisdictions and clearly marked modules for you to replace with your own data sources, jurisdictions, and regional groupings.
+## What is CARA?
 
-For the production Wisconsin implementation, see [CARA](https://github.com/jdn63/CARA).
+CARA provides a turnkey risk assessment web application for public health departments and emergency management agencies. It integrates data from authoritative federal, state, and local sources to produce actionable, jurisdiction-level risk scores aligned with CDC Public Health Emergency Preparedness (PHEP) capabilities.
 
-## Quick Start
+This repository is the **template version** of CARA. It contains placeholder jurisdictions and example data so you can quickly customize it for your own state, region, or territory.
 
-1. Clone or use this template to create your own repository
-2. Set up a PostgreSQL database and set the DATABASE_URL environment variable
-3. Run the application with Python 3.11+
-4. The app will start with 5 example jurisdictions (Example County A through E)
+### Key Features
 
-## Adapting CARA to Your Jurisdiction
+- **Multi-Domain Risk Assessment**: 5 primary domains (natural hazards, infectious disease, active shooter, extreme heat, air quality) plus supplementary assessments (cybersecurity, utilities)
+- **Real Data Integration**: Pre-cached data from OpenFEMA APIs, NOAA Storm Events Database, EPA AirNow, and local Census/FEMA NRI files
+- **Performance-Optimized**: Full dashboard context caching for near-instant load times after initial cache build
+- **Strategic Planning Mode**: Long-term risk assessment optimized for annual preparedness planning cycles
+- **PHEP Alignment**: Full integration with CDC Public Health Emergency Preparedness capabilities
+- **Automated Action Plans**: Customized preparedness recommendations with implementation timelines
+- **Interactive Visualization**: Geospatial mapping, risk distribution charts, and trend analysis
+- **GIS Export**: CSV, GeoJSON, and Shapefile exports for ArcGIS/QGIS
+- **HVA Export**: Kaiser Permanente HVA-compatible Excel reports for hospital preparedness planning
 
-The adaptation process is documented in two workshop guides included in docs/:
+## Getting Started
 
-- **Technical Workshop Guide** (docs/CARA_Adaptation_Workshop_Guide.md) -- A 5-day facilitator guide for developers, covering file-by-file customization with hands-on exercises
-- **Replit Workshop Guide** (docs/CARA_Replit_Workshop_Guide.md) -- A 3-day facilitator guide for non-technical users, using prompt-driven development on the Replit platform
+### Prerequisites
 
-### Key Files to Customize
+- Python 3.11+
+- PostgreSQL with PostGIS extension
+- API keys for optional data sources (see Configuration)
 
-| File | What to Change |
-|------|---------------|
-| utils/jurisdictions_code.py | Replace 5 example jurisdictions with your own |
-| utils/jurisdiction_mapping_code.py | Map jurisdiction IDs to county/district names |
-| data/census/example_demographics.csv | Population data for your jurisdictions |
-| data/census/example_housing_data.csv | Housing data for your jurisdictions |
-| data/svi/example_svi_data.json | Social vulnerability indices for your jurisdictions |
-| data/herc/example_regions.json | Regional groupings (optional) |
-| config/county_baselines.yaml | Baseline risk scores for your jurisdictions |
-| agencies.txt | List of health departments/agencies |
-| example_health_departments.json | Health department details |
+### Quick Start
 
-### Wisconsin-Specific Modules
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-org/cara.git
+   cd cara
+   ```
 
-The following modules are marked with WISCONSIN-SPECIFIC MODULE header blocks. They contain Wisconsin data sources and integrations that you should replace with your own:
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-- utils/dhs_data.py -- State health department API integration
-- utils/wisconsin_dhs_scraper.py -- State health department report scraping
-- utils/wisconsin_climate_data.py -- State climate normals
-- utils/wisconsin_mapping.py -- City-to-county mapping
-- utils/wem_data.py -- Emergency management data
-- utils/wem_integration.py -- Emergency management system integration
-- utils/wha_integration.py -- Hospital association integration
-- utils/herc_data.py -- Regional coalition data
-- utils/herc_risk_aggregator.py -- Regional risk aggregation
-- utils/tribal_boundaries.py -- Tribal jurisdiction boundaries
+3. **Set up environment variables**
+   ```bash
+   export DATABASE_URL="postgresql://username:password@localhost/cara_db"
+   export SESSION_SECRET="your-secret-key-here"
+   ```
 
-These modules are functional and will return graceful defaults when their Wisconsin-specific data is not present.
+4. **Run the application**
+   ```bash
+   python main.py
+   ```
+
+5. **Open** `http://localhost:5000` in your browser
+
+The template ships with 5 example jurisdictions so you can explore the full interface immediately.
+
+### Adapting CARA for Your Jurisdiction
+
+CARA is designed for adaptation. To customize it for your jurisdiction:
+
+1. **Replace jurisdiction data** in `utils/jurisdictions_code.py` with your real jurisdictions
+2. **Update data files** in `data/census/`, `data/svi/`, and `data/herc/` (or your equivalent regional grouping)
+3. **Configure risk baselines** in `config/county_baselines.yaml`
+4. **Customize branding** in templates (replace `[Your Jurisdiction]` placeholders)
+5. **Connect your data sources** by modifying the utility modules marked `JURISDICTION-SPECIFIC`
+
+For detailed adaptation guidance, see:
+- **[Adaptation Workshop Guide](docs/CARA_Adaptation_Workshop_Guide.md)** -- step-by-step workshop for adapting CARA
+- **[Replit Workshop Guide](docs/CARA_Replit_Workshop_Guide.md)** -- deploying on Replit
+- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** -- production deployment instructions
 
 ## Architecture
 
-- **Backend**: Flask (Python) with PostgreSQL and PostGIS
-- **Frontend**: Jinja2 templates with Bootstrap 5
-- **Visualization**: Chart.js for charts, Folium for interactive maps
-- **Data Processing**: Pandas, NumPy, GeoPandas
+### Backend
+- **Framework**: Flask (Python) with Blueprint architecture and application factory pattern
+- **Database**: PostgreSQL with PostGIS extension for geospatial data
+- **Data Processing**: Pandas, NumPy, GeoPandas for data manipulation
 - **Scheduling**: APScheduler for automated data refreshes
+- **APIs**: RESTful integration with multiple government data sources
+
+### Frontend
+- **Templates**: Jinja2 with Bootstrap 5 responsive design
+- **Visualization**: Chart.js for interactive charts, Folium for mapping
+- **Accessibility**: WCAG 2.1 AA compliant design with screen reader support
+- **Performance**: Lazy loading, caching, and optimized asset delivery
 
 ## Risk Assessment Framework
 
-CARA uses the PHRAT (Public Health Risk Assessment Tool) formula:
+CARA employs a multi-dimensional risk assessment methodology using 5 primary risk domains:
 
-**Overall Risk = sqrt(sum(w_i * Risk_i^2))** with p=2
+| Domain | Weight | Description |
+|--------|--------|-------------|
+| **Natural Hazards** | 33% | Flood, tornado, winter storm, thunderstorm (EVR framework with real NOAA/OpenFEMA data) |
+| **Health Metrics** | 20% | Infectious disease surveillance and vaccination rates |
+| **Active Shooter** | 20% | Community violence risk assessment |
+| **Extreme Heat** | 13% | Heat vulnerability and climate-adjusted risk |
+| **Air Quality** | 14% | Environmental health and AQI assessment |
+| **Cybersecurity** | Supplementary | Critical infrastructure cyber threats (proxy indicators) |
+| **Utilities Risk** | Supplementary | Electrical, water/sewer, supply chain, fuel shortage (proxy indicators) |
 
-### Risk Domains (5 Primary + 2 Supplementary)
+The 5 primary domains are aggregated using the **PHRAT quadratic mean formula** (p=2), which appropriately emphasizes higher-risk domains rather than averaging them away.
 
-1. Natural Hazards (flood, tornado, winter storm, thunderstorm)
-2. Infectious Disease (influenza, COVID-19, RSV)
-3. Active Shooter
-4. Extreme Heat
-5. Air Quality
-6. Cybersecurity (supplementary, proxy-based)
-7. Utilities/Infrastructure (supplementary, proxy-based)
+### Temporal Framework (BSTA)
 
-Each domain uses an Exposure-Vulnerability-Resilience (EVR) framework adjusted by CDC Social Vulnerability Index data.
+- **Baseline (60%)**: Long-term structural risk factors
+- **Seasonal (25%)**: Predictable cyclical variations
+- **Trend (15%)**: Medium-term directional changes
+- **Acute (0%)**: Short-term event-driven spikes (Strategic Planning Mode)
 
-## Data Integration
+### Social Vulnerability Integration
 
-CARA integrates data from multiple authoritative sources:
-
-- **OpenFEMA APIs** (keyless) -- Disaster declarations, NFIP claims, hazard mitigation projects
-- **NOAA NCEI Storm Events** -- Historical storm event data
-- **FEMA National Risk Index** -- Baseline hazard risk indices
-- **CDC Social Vulnerability Index** -- Community vulnerability factors
-- **EPA AirNow API** -- Air quality monitoring
-- **Local Census data** -- Demographics and housing from CSV files
-
-All external data is pre-fetched by scheduled jobs and cached in PostgreSQL, so no external API calls occur during user assessments.
-
-## Export Features
-
-- **Kaiser Permanente HVA Export** -- Auto-populates the official KP HVA template (.xlsm) with CARA risk data
-- **PDF Action Plans** -- Customized preparedness recommendations
-- **GIS Export** -- Geospatial data export for mapping applications
+All risk calculations incorporate CDC Social Vulnerability Index (SVI) factors:
+- Socioeconomic status
+- Household composition & disability
+- Minority status & language
+- Housing type & transportation
 
 ## Configuration
 
-- config/risk_weights.yaml -- Domain weights, temporal weights, SVI adjustment factors
-- config/county_baselines.yaml -- Jurisdiction-specific baseline scores
-- data/config/scheduler_config.json -- Data refresh schedules
+### Required Environment Variables
 
-## License
+```bash
+DATABASE_URL=postgresql://user:pass@localhost/cara_db
+SESSION_SECRET=your_secure_session_secret
+```
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPLv3). See LICENSE for details.
+### Optional API Keys
 
-## Citation
+```bash
+AIRNOW_API_KEY=your_airnow_api_key        # Air quality data
+OPENWEATHER_API_KEY=your_openweather_key   # Weather data
+```
 
-If you use CARA in your work, please cite it using the information in CITATION.cff.
+### Data Sources
+
+CARA integrates with multiple authoritative data sources, all pre-fetched by scheduled background jobs and cached locally:
+
+- **OpenFEMA APIs (keyless)**: Disaster Declarations, NFIP Claims, Hazard Mitigation Projects
+- **NOAA NCEI Storm Events Database**: Bulk CSV downloads of storm events
+- **CDC**: Social Vulnerability Index and PHEP guidelines
+- **FEMA NRI**: National Risk Index data (local CSV files)
+- **EPA AirNow**: Air quality monitoring (requires API key)
+- **NOAA/NWS**: Heat forecasting and weather alerts
+- **Census Bureau**: Demographic and housing data (local CSV files)
+
+## Project Structure
+
+```
+cara/
+├── main.py                 # Application entry point
+├── core.py                 # Flask app factory
+├── models.py               # SQLAlchemy database models
+├── routes/                 # Flask blueprints
+│   ├── api.py              # REST API endpoints
+│   ├── dashboard.py        # Risk dashboard views
+│   ├── herc.py             # Regional dashboard views
+│   ├── gis_export.py       # GIS data export
+│   └── public.py           # Public pages
+├── utils/                  # Business logic and data processing
+├── templates/              # Jinja2 HTML templates
+├── static/                 # CSS, JS, images
+├── data/                   # Local data files
+├── config/                 # YAML configuration
+├── tests/                  # Test suite
+└── docs/                   # Documentation and workshop guides
+```
+
+## Documentation
+
+- **[Adaptation Workshop Guide](docs/CARA_Adaptation_Workshop_Guide.md)** -- step-by-step adaptation instructions
+- **[Replit Workshop Guide](docs/CARA_Replit_Workshop_Guide.md)** -- deploying on Replit
+- **[Risk Assessment Methodology](docs/risk_assessment_methodology.md)** -- detailed calculation methods
+- **[API Management Guide](docs/api_management_guide.md)** -- API integration best practices
+- **[Data Sources Analysis](docs/data_sources_comprehensive_analysis.md)** -- complete data source documentation
+- **[Temporal Framework](docs/temporal_framework_usage_strategy.md)** -- strategic planning implementation
+- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** -- production deployment
+
+## How to Cite CARA
+
+If you use CARA in academic research, policy analysis, reports, or operational planning documents, please cite it as software.
+
+**Recommended citation (APA-style):**
+
+> Niedermeier, J. (2026). *CARA: Comprehensive Automated Risk Assessment* (Version 2.4) [Software]. https://github.com/jdn63/CARA
+
+**BibTeX:**
+
+```bibtex
+@software{cara_2026,
+  author  = {Niedermeier, Jaime},
+  title   = {CARA: Comprehensive Automated Risk Assessment},
+  year    = {2026},
+  version = {2.4},
+  url     = {https://github.com/jdn63/CARA}
+}
+```
 
 ## Contributing
 
-See CONTRIBUTING.md for guidelines on contributing to this project.
+We welcome contributions from the public health and emergency management community! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** -- see the [LICENSE](LICENSE) file for details. This ensures that CARA remains free and open-source, and that any modifications or network deployments must also share their source code.
+
+## Acknowledgments
+
+- **CDC** for the Public Health Emergency Preparedness framework
+- **FEMA** for natural hazard risk indices and OpenFEMA APIs
+- **Georgetown University** for research support and development
+- **Public health practitioners** who provided feedback and testing
+
+---
+
+**Built for Public Health Preparedness**

@@ -343,7 +343,7 @@
                                         ~ '<li>PM2.5 Baseline: EPA AirNow historical data</li>'
                                         ~ '<li>SVI Adjustment: Housing/socioeconomic vulnerability</li>'
                                         ~ '</ul>'
-                                        ~ '<div class="data-source">Sources: EPA AirNow, NOAA, Wisconsin DNR, CDC SVI</div>'
+                                        ~ '<div class="data-source">Sources: EPA AirNow, NOAA, State DNR, CDC SVI</div>'
                                         ) }}
                                     {% else %}
                                         0.30
@@ -961,7 +961,7 @@
                             </div>
                             <div class="mt-3">
                                 <small class="text-muted">
-                                    Sources: FEMA NRI, Wisconsin DNR, CDC SVI
+                                    Sources: FEMA NRI, State DNR, CDC SVI
                                 </small>
                             </div>
                         </div>
@@ -1171,13 +1171,13 @@
                             <h3>{{ "%.2f"|format(risk_data.health_risk) }}
                             {{ show_work_btn('health-info', 'Health Risk Calculation',
                             '<ul class="component-list">'
-                            ~ '<li>Influenza Activity (30%): Wisconsin DHS surveillance</li>'
-                            ~ '<li>COVID-19 Activity (30%): Wisconsin DHS surveillance</li>'
-                            ~ '<li>RSV Activity (20%): Wisconsin DHS surveillance</li>'
+                            ~ '<li>Influenza Activity (30%): State health department surveillance</li>'
+                            ~ '<li>COVID-19 Activity (30%): State health department surveillance</li>'
+                            ~ '<li>RSV Activity (20%): State health department surveillance</li>'
                             ~ '<li>Vaccination Coverage (20%): County Health Rankings</li>'
                             ~ '</ul>'
                             ~ '<div class="formula-line">Score = ' ~ "%.3f"|format(risk_data.health_risk) ~ '</div>'
-                            ~ '<div class="data-source">Sources: Wisconsin DHS Respiratory Surveillance PDFs (weekly), County Health Rankings</div>'
+                            ~ '<div class="data-source">Sources: State health department surveillance data, County Health Rankings</div>'
                             ) }}
                             </h3>
                             <span class="badge bg-{{ 'danger' if risk_data.health_risk > 0.6 else 'warning' if risk_data.health_risk > 0.3 else 'success' }}">
@@ -1264,7 +1264,7 @@
                     </div>
                     <div class="mt-3">
                         <small class="text-muted">
-                            Source: Wisconsin Department of Health Services (updated weekly)
+                            Source: State health department (updated weekly)
                         </small>
                     </div>
                 </div>
@@ -1296,7 +1296,7 @@
                             ~ '<li>Resilience: ' ~ "%.3f"|format(risk_data.extreme_heat_components.resilience) ~ ' (cooling centers, infrastructure)</li>'
                             ~ '</ul>'
                             ~ '<div class="formula-line">+ SVI weighted avg adjustment → ' ~ "%.3f"|format(risk_data.extreme_heat_risk) ~ '</div>'
-                            ~ '<div class="data-source">Sources: NOAA, Wisconsin DHS HVI, CDC SVI, U.S. Census</div>'
+                            ~ '<div class="data-source">Sources: NOAA, State HVI, CDC SVI, U.S. Census</div>'
                             ) }}
                             {% endif %}
                             </h3>
@@ -1437,7 +1437,7 @@
                     </div>
                     <div class="mt-3">
                         <small class="text-muted">
-                            Sources: NOAA, Wisconsin DHS, EPA
+                            Sources: NOAA, State DHS, EPA
                         </small>
                     </div>
                 </div>
@@ -1695,7 +1695,7 @@
                     </div>
                     <div class="mt-3">
                         <small class="text-muted">
-                            Sources: Wisconsin Public Service Commission, FEMA, Historical outage data, Census Bureau
+                            Sources: State public utility commission, FEMA, Historical outage data, Census Bureau
                         </small>
                     </div>
                 </div>
@@ -2217,7 +2217,7 @@ function exportSingleJurisdiction(jurisdictionId) {
                 </a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="#" onclick="exportAllJurisdictions(); return false;">
-                    <i class="fas fa-map-marked-alt me-2"></i>Export All Wisconsin Data
+                    <i class="fas fa-map-marked-alt me-2"></i>Export All Jurisdiction Data
                 </a></li>
             </ul>
         </div>

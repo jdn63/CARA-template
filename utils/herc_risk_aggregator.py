@@ -1,3 +1,17 @@
+# =============================================================================
+# WISCONSIN-SPECIFIC MODULE (Regional/Tribal)
+# =============================================================================
+# This module aggregates risk scores across HERC (Healthcare Emergency Readiness
+# Coalition) regions -- a Wisconsin-specific regional grouping for hospital
+# preparedness planning.
+#
+# FOR OTHER JURISDICTIONS: If you use regional groupings, this module shows how
+# to aggregate jurisdiction-level scores to a regional level. Adapt the region
+# definitions to match your structure.
+#
+# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
+# =============================================================================
+
 """
 HERC Risk Aggregation Module
 

@@ -1,0 +1,26 @@
+[
+    {
+        "name": "Example County A",
+        "county": "Example County A Public Health Department"
+    },
+    {
+        "name": "Example County A",
+        "county": "Example City Health Department"
+    },
+    {
+        "name": "Example County B",
+        "county": "Example County B Health & Human Services"
+    },
+    {
+        "name": "Example County C",
+        "county": "Example County C Health Department"
+    },
+    {
+        "name": "Example County D",
+        "county": "Example County D Department of Health & Human Services"
+    },
+    {
+        "name": "Example County E",
+        "county": "Example County E Health Department"
+    }
+]

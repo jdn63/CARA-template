@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <p class="text-muted">Generated for: {{ risk_data.location }} on {{ current_date }}</p>
             <p class="alert alert-info">
-                <span class="badge bg-info">v2.4</span> Comprehensive Wisconsin coverage: 95 unique public health departments (84 local health departments + 11 tribal nations) across 7 HERC regions.
+                <span class="badge bg-info">v2.4</span> Comprehensive jurisdiction coverage across all configured public health departments and regions.
             </p>
             <div class="alert alert-info mt-2">
                 <strong>Strategic Planning Risk Assessment:</strong> This summary provides risk analysis optimized for annual preparedness planning. Risk scores emphasize structural baseline factors (60%) and seasonal patterns (25%) to support strategic resource allocation decisions. Current events shown for context but do not drive long-term planning recommendations.
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>
                             {# Map risk names to data sources #}
                             {% if risk_name == 'health' %}
-                                Wisconsin DHS Weekly Respiratory Report
+                                State Health Department Respiratory Report
                             {% elif risk_name == 'cybersecurity' %}
                                 HHS Breach Portal, FBI IC3 Report, CISA KEV
                             {% elif risk_name == 'extreme_heat' %}
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <p><strong>Report Generation Date:</strong> {{ current_date }}</p>
             <p><small class="text-muted">For methodology details, visit: https://caratool.org/methodology</small></p>
             <div class="alert alert-warning mt-2 small">
-                This report was generated using CARA (Comprehensive Automated Risk Assessment) <strong>v2.1</strong>, developed as a research project at Georgetown University in collaboration with Wisconsin health departments. While it uses official data sources, users should verify critical information with their authoritative sources when making major decisions.
+                This report was generated using CARA (Comprehensive Automated Risk Assessment) <strong>v2.1</strong>, developed as an open-source project for public health emergency preparedness risk assessment. While it uses official data sources, users should verify critical information with their authoritative sources when making major decisions.
                 <div class="mt-2">
                     <strong>Research Tool Notice:</strong> This platform is designed for strategic planning support and educational purposes. All recommendations should be validated through established emergency management protocols and local expertise before implementation.
                 </div>

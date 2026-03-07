@@ -10,30 +10,29 @@
 #
 # WEIGHT RATIONALE:
 # Weights reflect the relative frequency, severity, and breadth of public health
-# impact for each hazard type in Wisconsin, informed by:
-#   - FEMA National Risk Index annualized expected loss data for Wisconsin
+# impact for each hazard type, informed by:
+#   - FEMA National Risk Index annualized expected loss data
 #   - CDC PHEP (Public Health Emergency Preparedness) capability priorities
-#   - Wisconsin DHS Hazard Vulnerability Assessment guidance
+#   - State/local Hazard Vulnerability Assessment guidance
 #   - Historical disaster declaration frequency (FEMA, 2000-2024)
 #
 # Natural Hazards (33%): Highest weight because FEMA NRI data shows natural
-#   hazards produce the largest annualized expected losses in WI. Covers 4 sub-types
+#   hazards produce the largest annualized expected losses. Covers 4 sub-types
 #   (flood, tornado, winter storm, thunderstorm), each with independent data sources.
 # Health Metrics (20%): Infectious disease is a core PHEP capability; weighted
 #   equally with active shooter to reflect comparable community-wide impact.
 # Active Shooter (20%): CDC/ASPR identifies active shooter as a high-consequence
 #   threat requiring dedicated PHEP planning; weighted equally with health metrics.
-# Air Quality (14%): EPA data shows increasing wildfire smoke episodes affecting WI;
+# Air Quality (14%): EPA data shows increasing wildfire smoke episodes;
 #   weighted to reflect growing but still geographically uneven impact.
 # Extreme Heat (13%): NOAA data shows heat as the leading weather-related cause
-#   of death nationally; weighted slightly below air quality due to WI's northern
-#   latitude tempering exposure relative to southern states.
+#   of death nationally; weighted slightly below air quality.
 #
 # These weights are configurable. Jurisdictions may adjust them based on local
 # hazard profiles and planning priorities. Changes should be documented.
 overall_risk_weights:
   natural_hazards: 0.33    # 33% - Natural disasters, weather events (FEMA NRI, CDC SVI, NOAA)
-  health_metrics: 0.20     # 20% - Disease surveillance, healthcare capacity (WI DHS, CDC)
+  health_metrics: 0.20     # 20% - Disease surveillance, healthcare capacity (CDC)
   active_shooter: 0.20     # 20% - Active shooter and violence risk (GVA, FBI, Census)
   extreme_heat: 0.13       # 13% - Heat vulnerability and climate risk (NWS, NOAA)
   air_quality: 0.14        # 14% - Environmental health, AQI assessment (EPA AirNow)
@@ -93,7 +92,7 @@ active_shooter_weights:
 # with climate change projections applied to the exposure component.
 # Thunderstorm risk uses independent NOAA Storm Events Database severity data.
 natural_hazards_weights:
-  flood: 0.25           # Equal weight - FEMA NRI + NOAA/WICCI climate projections
+  flood: 0.25           # Equal weight - FEMA NRI + NOAA climate projections
   tornado: 0.25         # Equal weight - FEMA NRI + NOAA/IPCC climate projections
   winter_storm: 0.25    # Equal weight - FEMA NRI + climate projections
   thunderstorm: 0.25    # Equal weight - NOAA Storm Events Database + EPA/NOAA projections
@@ -145,7 +144,7 @@ natural_hazards_resilience_inputs:
     # Plus hazard-specific base resilience factors
 
 # Climate Change Projection Multipliers (applied to exposure component)
-# Source: NOAA, IPCC AR6, WICCI 2021, EPA
+# Source: NOAA, IPCC AR6, EPA
 # Period: 2030-2050, Baseline: 1986-2005, Scenario: RCP4.5/SSP2-4.5
 # Region-specific values stored in data/climate/natural_hazard_climate_projections.json
 climate_projection_ranges:
@@ -170,12 +169,12 @@ extreme_heat_weights:
 
 # Jurisdiction-Specific Overrides
 # Format: jurisdiction_id or county_name
+# Example: Override weights for a specific high-risk urban jurisdiction
 jurisdiction_overrides:
-  # Example for high-risk urban areas
-  milwaukee_county:
-    overall_risk_weights:
-      active_shooter: 0.25    # Increase active shooter weight for urban area
-      natural_hazards: 0.28   # Adjust natural hazards weight
+  # example_county_a:
+  #   overall_risk_weights:
+  #     active_shooter: 0.25    # Increase active shooter weight for urban area
+  #     natural_hazards: 0.28   # Adjust natural hazards weight
 
 # Normalization Configuration
 normalization:
@@ -225,7 +224,7 @@ contribution_logging:
 # WEIGHT RATIONALE (EM):
 # Weights reflect emergency management priorities informed by:
 #   - FEMA Comprehensive Preparedness Guide (CPG) 201
-#   - Wisconsin Emergency Management (WEM) hazard mitigation planning guidance
+#   - State/local hazard mitigation planning guidance
 #   - National Infrastructure Protection Plan (NIPP) framework
 #   - EMAP (Emergency Management Accreditation Program) standards
 #
@@ -302,4 +301,4 @@ em_resilience_inputs:
 version: '2.5.0'
 last_updated: '2026-02-24'
 updated_by: 'CARA Development Team'
-description: 'Comprehensive risk assessment weights for Wisconsin public health and emergency management strategic planning'
+description: 'Comprehensive risk assessment weights for public health and emergency management strategic planning'

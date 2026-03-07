@@ -33,7 +33,7 @@
                         <button class="nav-link active" id="jurisdiction-tab" data-bs-toggle="tab" data-bs-target="#jurisdiction-content" type="button" role="tab" aria-controls="jurisdiction-content" aria-selected="true">Jurisdiction</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="herc-tab" data-bs-toggle="tab" data-bs-target="#herc-content" type="button" role="tab" aria-controls="herc-content" aria-selected="false">HERC Regions</button>
+                        <button class="nav-link" id="herc-tab" data-bs-toggle="tab" data-bs-target="#herc-content" type="button" role="tab" aria-controls="herc-content" aria-selected="false">Regions</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="gis-export-tab" data-bs-toggle="tab" data-bs-target="#gis-export-content" type="button" role="tab" aria-controls="gis-export-content" aria-selected="false">Download Data</button>
@@ -60,32 +60,32 @@
                                 <small class="text-muted">Unable to load jurisdictions. Please try again later.</small>
                                 {% endif %}
                                 <div class="form-text mt-2">
-                                    Select from 84 local public health agencies and 11 tribal health centers
+                                    Select from available local public health agencies and tribal health centers
                                 </div>
                             </div>
                         </form>
                     </div>
                     
-                    <!-- HERC Selection Tab -->
+                    <!-- Region Selection Tab -->
                     <div class="tab-pane fade" id="herc-content" role="tabpanel" aria-labelledby="herc-tab">
                         <form id="hercAssessmentForm" action="/herc-dashboard/" method="GET">
                             <div class="mb-3">
-                                <label for="herc_region" class="form-label">Select HERC Region</label>
+                                <label for="herc_region" class="form-label">Select Region</label>
                                 <select class="form-select" id="herc_region" name="herc_id" required onchange="selectHercRegion(this.value, this.options[this.selectedIndex].text);">
-                                    <option value="">Choose a HERC region...</option>
+                                    <option value="">Choose a region...</option>
                                     {% if herc_regions %}
                                         {% for region in herc_regions %}
                                         <option value="{{ region.id }}">{{ region.name }}</option>
                                         {% endfor %}
                                     {% else %}
-                                        <option value="" disabled>No HERC regions available</option>
+                                        <option value="" disabled>No regions available</option>
                                     {% endif %}
                                 </select>
                                 {% if not herc_regions %}
-                                <small class="text-muted">Unable to load HERC regions. Please try again later.</small>
+                                <small class="text-muted">Unable to load regions. Please try again later.</small>
                                 {% endif %}
                                 <div class="form-text mt-2">
-                                    Select from 7 Healthcare Emergency Readiness Coalition regions for hospital preparedness planning
+                                    Select from available regional groupings for hospital preparedness planning
                                 </div>
                             </div>
                         </form>
@@ -96,7 +96,7 @@
                         <div class="row">
                             <div class="col-lg-8">
                                 <h5><i class="fas fa-map-marked-alt me-2"></i>ArcGIS Data Export</h5>
-                                <p class="mb-3">Export CARA risk assessment data for all Wisconsin jurisdictions in ArcGIS-compatible formats.</p>
+                                <p class="mb-3">Export CARA risk assessment data for all jurisdictions in ArcGIS-compatible formats.</p>
                                 
                                 <!-- Export Buttons -->
                                 <div class="row mb-4">
@@ -162,7 +162,7 @@
                                             </div>
                                             <div>
                                                 <strong>Generating exports...</strong><br>
-                                                <small>Processing risk data for all Wisconsin jurisdictions</small>
+                                                <small>Processing risk data for all jurisdictions</small>
                                             </div>
                                         </div>
                                     </div>
@@ -174,7 +174,7 @@
                                 </div>
                                 
                                 <div class="form-text mt-2">
-                                    Export comprehensive risk scores for all 95 Wisconsin jurisdictions for use in ArcGIS mapping and analysis
+                                    Export comprehensive risk scores for all jurisdictions for use in ArcGIS mapping and analysis
                                 </div>
                             </div>
                             
@@ -203,7 +203,7 @@
                                             <div id="csvInstructions" class="accordion-collapse collapse" data-bs-parent="#gisAccordion">
                                                 <div class="accordion-body small">
                                                     <ol class="small">
-                                                        <li>Open ArcGIS Pro → Add Data → Add XY Data</li>
+                                                        <li>Open ArcGIS Pro &rarr; Add Data &rarr; Add XY Data</li>
                                                         <li>Select CSV, set X=<code>lon</code>, Y=<code>lat</code></li>
                                                         <li>Coordinate System = WGS84</li>
                                                         <li>Use risk fields for symbology</li>
@@ -221,22 +221,16 @@
                 <script>
                     function selectJurisdiction(jurisdictionId, jurisdictionName) {
                         if (jurisdictionId) {
-                            // Store the selected jurisdiction in localStorage
                             localStorage.setItem('selectedJurisdictionId', jurisdictionId);
                             localStorage.setItem('selectedJurisdictionName', jurisdictionName);
-                            
-                            // Navigate to the dashboard
                             window.location.href = `/dashboard/${jurisdictionId}`;
                         }
                     }
                     
                     function selectHercRegion(hercId, hercName) {
                         if (hercId) {
-                            // Store the selected HERC region in localStorage
                             localStorage.setItem('selectedHercId', hercId);
                             localStorage.setItem('selectedHercName', hercName);
-                            
-                            // Navigate to the HERC dashboard
                             window.location.href = `/herc-dashboard/${hercId}`;
                         }
                     }
@@ -271,7 +265,6 @@
                         }
                         
                         function exportData(format) {
-                            // Show initial loading status
                             if (exportStatus) {
                                 exportStatus.classList.remove('d-none');
                                 exportStatus.innerHTML = `
@@ -284,17 +277,14 @@
                                 exportResults.classList.add('d-none');
                             }
                             
-                            // Disable buttons during export
                             [exportAllBtn, exportCsvBtn, exportGeojsonBtn].forEach(btn => {
                                 if (btn) btn.disabled = true;
                             });
                             
-                            // Start async export job
                             fetch('/api/gis/export/all', {method: 'POST'})
                                 .then(response => response.json())
                                 .then(data => {
                                     if (data.status === 'job_created') {
-                                        // Start polling for job status
                                         pollJobStatus(data.job_id, format);
                                     } else {
                                         showError(data.error || 'Failed to start export job');
@@ -342,7 +332,7 @@
                                         showError('Error checking job status: ' + error.message);
                                         enableButtons();
                                     });
-                            }, 2000); // Poll every 2 seconds
+                            }, 2000);
                         }
                         
                         window.cancelExport = function() {
@@ -386,36 +376,88 @@
                                     </div>
                                     <div class="progress mb-2">
                                         <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                             style="width: ${progressPercent}%"></div>
+                                             role="progressbar" style="width: ${progressPercent}%"
+                                             aria-valuenow="${progressPercent}" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
                                     </div>
-                                    <div class="small text-muted">
-                                        Processed ${completedCount} of ${totalCount} jurisdictions`;
+                                    <div class="d-flex justify-content-between">
+                                        <small>${completedCount} of ${totalCount} jurisdictions processed</small>
+                                        <small>`;
                             
-                            if (errorCount > 0) {
-                                statusHtml += ` (${errorCount} errors)`;
-                            }
-                            
-                            if (estimatedSeconds && estimatedSeconds > 0) {
+                            if (estimatedSeconds !== null && estimatedSeconds !== undefined) {
                                 const minutes = Math.floor(estimatedSeconds / 60);
                                 const seconds = estimatedSeconds % 60;
                                 if (minutes > 0) {
-                                    statusHtml += `<br>Estimated time remaining: ${minutes}m ${seconds}s`;
+                                    statusHtml += `~${minutes}m ${seconds}s remaining`;
                                 } else {
-                                    statusHtml += `<br>Estimated time remaining: ${seconds}s`;
+                                    statusHtml += `~${seconds}s remaining`;
                                 }
                             }
                             
+                            statusHtml += `</small>
+                                    </div>`;
+                            
+                            if (errorCount > 0) {
+                                statusHtml += `<div class="mt-1"><small class="text-warning">${errorCount} jurisdiction(s) had errors</small></div>`;
+                            }
+                            
                             statusHtml += `
-                                    </div>
-                                    <div class="mt-3">
-                                        <button onclick="cancelExport()" class="btn btn-sm btn-danger">
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="cancelExport()">
                                             <i class="fas fa-times me-1"></i>Cancel Export
                                         </button>
                                     </div>
-                                </div>
-                            `;
+                                </div>`;
                             
                             exportStatus.innerHTML = statusHtml;
+                        }
+                        
+                        function showExportResults(data, requestedFormat) {
+                            if (!exportResults || !exportStatus) return;
+                            exportStatus.classList.add('d-none');
+                            exportResults.classList.remove('d-none');
+                            
+                            let html = '<div class="alert alert-success"><h5><i class="fas fa-check-circle me-2"></i>Export Complete!</h5>';
+                            
+                            if (data.files) {
+                                html += '<div class="list-group mt-2">';
+                                if (data.files.csv && (requestedFormat === 'csv' || requestedFormat === 'all')) {
+                                    html += `<a href="${data.files.csv}" class="list-group-item list-group-item-action" download>
+                                        <i class="fas fa-file-csv me-2 text-success"></i>Download CSV
+                                    </a>`;
+                                }
+                                if (data.files.geojson && (requestedFormat === 'geojson' || requestedFormat === 'all')) {
+                                    html += `<a href="${data.files.geojson}" class="list-group-item list-group-item-action" download>
+                                        <i class="fas fa-globe me-2 text-info"></i>Download GeoJSON
+                                    </a>`;
+                                }
+                                html += '</div>';
+                            }
+                            
+                            html += '</div>';
+                            exportResults.innerHTML = html;
+                        }
+                        
+                        function showError(message) {
+                            if (exportStatus) {
+                                exportStatus.classList.remove('d-none');
+                                exportStatus.innerHTML = `
+                                    <div class="alert alert-danger">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>${message}
+                                    </div>
+                                `;
+                            }
+                        }
+                        
+                        function showCancelMessage() {
+                            if (exportStatus) {
+                                exportStatus.classList.remove('d-none');
+                                exportStatus.innerHTML = `
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-ban me-2"></i>Export canceled.
+                                    </div>
+                                `;
+                            }
                         }
                         
                         function enableButtons() {
@@ -423,151 +465,10 @@
                                 if (btn) btn.disabled = false;
                             });
                         }
-                        
-                        function showExportResults(data, format) {
-                            if (!exportResults || !exportStatus) return;
-                            
-                            // Hide progress status
-                            exportStatus.classList.add('d-none');
-                            
-                            const recordCount = data.result_files?.record_count || 0;
-                            const downloads = data.downloads || {};
-                            
-                            let resultsHtml = `
-                                <div class="alert alert-success">
-                                    <h6><i class="fas fa-check-circle me-2"></i>Export Complete!</h6>
-                                    <p class="mb-1">Successfully exported data for ${recordCount} Wisconsin jurisdictions.</p>
-                                    <small>Job ID: ${data.id}</small>
-                                </div>
-                                <div class="row">
-                            `;
-                            
-                            if ((format === 'all' || format === 'csv') && downloads.csv) {
-                                resultsHtml += `
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <h6><i class="fas fa-table me-2"></i>CSV Export</h6>
-                                                <p class="small">${downloads.csv.description}</p>
-                                                <a href="${downloads.csv.download_url}" class="btn btn-success btn-sm">
-                                                    <i class="fas fa-download me-2"></i>Download CSV
-                                                </a>
-                                                <div class="small text-muted mt-2">
-                                                    File: ${downloads.csv.filename}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                            
-                            if ((format === 'all' || format === 'geojson') && downloads.geojson) {
-                                resultsHtml += `
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <h6><i class="fas fa-map me-2"></i>GeoJSON Export</h6>
-                                                <p class="small">${downloads.geojson.description}</p>
-                                                <a href="${downloads.geojson.download_url}" class="btn btn-success btn-sm">
-                                                    <i class="fas fa-download me-2"></i>Download GeoJSON
-                                                </a>
-                                                <div class="small text-muted mt-2">
-                                                    File: ${downloads.geojson.filename}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>`;
-                            }
-                            
-                            resultsHtml += '</div>';
-                            
-                            exportResults.innerHTML = resultsHtml;
-                            exportResults.classList.remove('d-none');
-                        }
-                        
-                        function showError(message) {
-                            if (!exportResults || !exportStatus) return;
-                            
-                            // Hide progress status
-                            exportStatus.classList.add('d-none');
-                            
-                            exportResults.innerHTML = `
-                                <div class="alert alert-danger">
-                                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Export Failed</h6>
-                                    <p>${message}</p>
-                                </div>
-                            `;
-                            exportResults.classList.remove('d-none');
-                        }
-                        
-                        function showCancelMessage() {
-                            if (!exportResults || !exportStatus) return;
-                            
-                            // Hide progress status
-                            exportStatus.classList.add('d-none');
-                            
-                            exportResults.innerHTML = `
-                                <div class="alert alert-warning">
-                                    <h6><i class="fas fa-times-circle me-2"></i>Export Canceled</h6>
-                                    <p>The export has been canceled. You can start a new export whenever you're ready.</p>
-                                </div>
-                            `;
-                            exportResults.classList.remove('d-none');
-                        }
                     });
                 </script>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Maps Row - Horizontally aligned -->
-<div class="row">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header">
-                <h5 class="card-title">Wisconsin Public Health Regions</h5>
-            </div>
-            <div class="card-body text-center">
-                <!-- Public Health Regions Map -->
-                <img src="{{ url_for('static', filename='images/regions/wisconsin_public_health_regions.png') }}" 
-                     alt="Map of Wisconsin Public Health Regions" 
-                     class="img-fluid mb-2"
-                     style="max-height: 280px; width: auto;" 
-                     onerror="this.src='https://via.placeholder.com/500x350?text=Wisconsin+Public+Health+Regions';this.onerror=null;">
-                
-                <div class="small text-muted mt-2">
-                    <p class="mb-1">Wisconsin is divided into five public health regions: Northern, Northeastern, Western, Southern, and Southeastern.</p>
-                    <p class="mb-0 mt-1 font-italic" style="font-size: 0.75rem;">Source: <a href="https://www.dhs.wisconsin.gov/lh-depts/index.htm" target="_blank">Wisconsin Department of Health Services</a></p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header">
-                <h5 class="card-title">Tribal Health Jurisdictions</h5>
-            </div>
-            <div class="card-body text-center">
-                <!-- Tribal Jurisdictions Map -->
-                <img src="{{ url_for('static', filename='images/regions/wisconsin_tribal_jurisdictions.png') }}" 
-                     alt="Map of Wisconsin Tribal Nations" 
-                     class="img-fluid mb-2"
-                     style="max-height: 280px; width: auto;" 
-                     onerror="this.src='https://via.placeholder.com/500x350?text=Wisconsin+Tribal+Jurisdictions';this.onerror=null;">
-                
-                <div class="small text-muted mt-2">
-                    <p class="mb-1">Wisconsin is home to 11 federally recognized tribal nations with public health jurisdictions.</p>
-                    <p class="mb-0 mt-1 font-italic" style="font-size: 0.75rem;">Source: <a href="https://wisconsinfirstnations.org/american-indian-nations-wisconsin/tribalgovernmentmap600/" target="_blank">Wisconsin First Nations</a></p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Include only the necessary JavaScript for jurisdiction selection -->
-<script src="{{ url_for('static', filename='js/index.js') }}"></script>
-
-<!-- Results section removed as requested -->
 {% endblock %}

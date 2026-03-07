@@ -1,0 +1,21 @@
+[
+  {
+    "id": "1",
+    "name": "Region 1 (Northern)",
+    "counties": [
+      "Example County A",
+      "Example County B",
+      "Example County C"
+    ],
+    "color": "#FF9F1C"
+  },
+  {
+    "id": "2",
+    "name": "Region 2 (Southern)",
+    "counties": [
+      "Example County D",
+      "Example County E"
+    ],
+    "color": "#2EC4B6"
+  }
+]

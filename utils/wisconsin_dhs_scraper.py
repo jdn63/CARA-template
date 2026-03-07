@@ -1,3 +1,18 @@
+# =============================================================================
+# WISCONSIN-SPECIFIC MODULE
+# =============================================================================
+# This module scrapes Wisconsin Department of Health Services (DHS) respiratory
+# surveillance reports. It is specific to Wisconsin's DHS website and PDF report
+# format.
+#
+# FOR OTHER JURISDICTIONS: Replace this module with a scraper or API client for
+# your jurisdiction's health department surveillance data. Your module should
+# provide functions that return disease surveillance metrics (case counts,
+# positivity rates, etc.) for each of your jurisdictions.
+#
+# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
+# =============================================================================
+
 """
 Wisconsin DHS Respiratory Surveillance Data Scraper
 

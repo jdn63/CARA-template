@@ -1,0 +1,50 @@
+{
+  "example county a": {
+    "overall": 0.35,
+    "socioeconomic": 0.3,
+    "household_composition": 0.4,
+    "minority_status": 0.5,
+    "housing_transportation": 0.2,
+    "last_updated": "2025-01-01T00:00:00.000000"
+  },
+  "example county b": {
+    "overall": 0.55,
+    "socioeconomic": 0.6,
+    "household_composition": 0.5,
+    "minority_status": 0.45,
+    "housing_transportation": 0.55,
+    "last_updated": "2025-01-01T00:00:00.000000"
+  },
+  "example county c": {
+    "overall": 0.7,
+    "socioeconomic": 0.75,
+    "household_composition": 0.65,
+    "minority_status": 0.6,
+    "housing_transportation": 0.7,
+    "last_updated": "2025-01-01T00:00:00.000000"
+  },
+  "example county d": {
+    "overall": 0.8,
+    "socioeconomic": 0.85,
+    "household_composition": 0.75,
+    "minority_status": 0.7,
+    "housing_transportation": 0.8,
+    "last_updated": "2025-01-01T00:00:00.000000"
+  },
+  "example county e": {
+    "overall": 0.25,
+    "socioeconomic": 0.2,
+    "household_composition": 0.3,
+    "minority_status": 0.35,
+    "housing_transportation": 0.2,
+    "last_updated": "2025-01-01T00:00:00.000000"
+  },
+  "state_average": {
+    "overall": 0.5,
+    "socioeconomic": 0.5,
+    "household_composition": 0.5,
+    "minority_status": 0.5,
+    "housing_transportation": 0.5,
+    "last_updated": "2025-01-01T00:00:00.000000"
+  }
+}

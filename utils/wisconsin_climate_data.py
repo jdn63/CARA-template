@@ -1,3 +1,16 @@
+# =============================================================================
+# WISCONSIN-SPECIFIC MODULE
+# =============================================================================
+# This module provides hardcoded climate normals and heat-related statistics for
+# Wisconsin counties based on NOAA data and the Wisconsin State Climatology Office.
+#
+# FOR OTHER JURISDICTIONS: Replace the county climate data dictionary with climate
+# data for your jurisdictions. You need: annual heat days, elderly population
+# percentage, and estimated heat-related health metrics per jurisdiction.
+#
+# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
+# =============================================================================
+
 """
 Wisconsin Climate Data Module
 

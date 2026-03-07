@@ -1,3 +1,17 @@
+# =============================================================================
+# WISCONSIN-SPECIFIC MODULE (Regional/Tribal)
+# =============================================================================
+# This module maps Wisconsin tribal nations to their associated counties and
+# calculates tribal-specific risk adjustments.
+#
+# FOR OTHER JURISDICTIONS: If your jurisdiction includes indigenous/tribal areas
+# or other special administrative units that overlap with primary jurisdictions,
+# adapt this module with your own mappings. Otherwise, this module can be left
+# in place -- it will return default values when Wisconsin tribal data is absent.
+#
+# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
+# =============================================================================
+
 """
 Module for integrating tribal boundaries into the risk assessment application.
 """
