@@ -10,8 +10,8 @@ import os
 # Default is 30, but HERC calculations can take longer on first request
 timeout = 180
 
-# Number of workers (3 workers x 4 threads = 12 concurrent request slots)
-workers = 3
+# Number of workers (2 workers x 4 threads = 8 concurrent request slots)
+workers = 2
 
 # Use threaded workers
 threads = 4
