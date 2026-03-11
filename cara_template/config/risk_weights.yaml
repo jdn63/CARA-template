@@ -317,7 +317,7 @@ em_resilience_inputs:
 # =============================================================================
 
 # Version and Metadata
-version: '2.5.0'
-last_updated: '2026-02-24'
+version: '2.6.0'
+last_updated: '2026-03-11'
 updated_by: 'CARA Development Team'
 description: 'Comprehensive risk assessment weights for Wisconsin public health and emergency management strategic planning'

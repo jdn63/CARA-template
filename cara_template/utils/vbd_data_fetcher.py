@@ -97,8 +97,8 @@ def _get_cached_statewide_data() -> Optional[Dict[str, Any]]:
         )
         if cache_entry and cache_entry.get('data'):
             return cache_entry['data']
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"VBD cache lookup failed: {e}")
     return None
 
 

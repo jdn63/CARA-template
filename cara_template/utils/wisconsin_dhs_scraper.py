@@ -201,7 +201,7 @@ class WisconsinDHSScraper:
         if match:
             try:
                 return datetime.strptime(match.group(1), "%B %d, %Y").strftime("%Y-%m-%d")
-            except Exception:
+            except (ValueError, TypeError):
                 pass
         
         date_pattern2 = r'^([A-Z][a-z]+ \d{1,2}, \d{4})'
@@ -209,7 +209,7 @@ class WisconsinDHSScraper:
         if match2:
             try:
                 return datetime.strptime(match2.group(1), "%B %d, %Y").strftime("%Y-%m-%d")
-            except Exception:
+            except (ValueError, TypeError):
                 pass
         
         return datetime.now().strftime("%Y-%m-%d")
@@ -309,7 +309,7 @@ class WisconsinDHSScraper:
                     val = float(match.group(1))
                     if 0 <= val <= 100:
                         lab_data[key] = val
-                except Exception:
+                except (ValueError, TypeError):
                     pass
         
         return lab_data
@@ -436,7 +436,7 @@ class WisconsinDHSScraper:
                 # Convert to standard format
                 parsed_date = datetime.strptime(date_str, "%B %d, %Y")
                 return parsed_date.strftime("%Y-%m-%d")
-            except Exception:
+            except (ValueError, TypeError):
                 pass
         
         # Fallback to current date
@@ -521,7 +521,7 @@ class WisconsinDHSScraper:
                     if 0 <= val <= 100:
                         lab_data[key] = val
                         extracted_count += 1
-                except Exception:
+                except (ValueError, TypeError):
                     pass
         
         if extracted_count == 0:
@@ -538,7 +538,7 @@ class WisconsinDHSScraper:
                         val = float(match.group(1))
                         if 0 < val <= 100:
                             lab_data[key] = val
-                    except Exception:
+                    except (ValueError, TypeError):
                         pass
         
         logger.info(f"Lab data extracted ({extracted_count} from table): flu={lab_data['influenza_percent']}%, covid={lab_data['covid19_percent']}%, rsv={lab_data['rsv_percent']}%")

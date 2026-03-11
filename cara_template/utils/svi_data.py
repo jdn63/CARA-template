@@ -170,6 +170,69 @@ def get_svi_data(county_name: str) -> Dict[str, float]:
     return default_data
 
 
+def fetch_bulk_svi_data() -> Dict[str, Dict[str, Any]]:
+    """
+    Fetch CDC/ATSDR SVI 2022 data for ALL Wisconsin counties in a single
+    API call. Much more efficient than 72 individual requests.
+
+    Returns:
+        Dictionary keyed by lowercase county name with SVI data for each county.
+        On failure, returns an empty dict.
+    """
+    try:
+        url = ("https://onemap.cdc.gov/OneMapServices/rest/services/SVI/"
+               "CDC_ATSDR_Social_Vulnerability_Index_2022_USA/"
+               "FeatureServer/1/query")
+        params = {
+            'where': "ST_ABBR='WI'",
+            'outFields': ('FIPS,COUNTY,STATE,RPL_THEMES,RPL_THEME1,'
+                          'RPL_THEME2,RPL_THEME3,RPL_THEME4,E_TOTPOP'),
+            'f': 'json',
+            'returnGeometry': 'false',
+            'resultRecordCount': 100
+        }
+        logger.info("Fetching bulk CDC SVI 2022 data for all Wisconsin counties")
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        features = data.get('features', [])
+
+        if not features:
+            logger.warning("CDC SVI bulk query returned no features")
+            return {}
+
+        def _clean(v):
+            if v is None or v == -999:
+                return None
+            return round(max(0, min(1, v)), 4)
+
+        result = {}
+        for feature in features:
+            attrs = feature['attributes']
+            county = attrs.get('COUNTY', '').replace(' County', '').strip().lower()
+            if not county:
+                continue
+            result[county] = {
+                "county": county.title(),
+                "overall": _clean(attrs.get('RPL_THEMES')),
+                "socioeconomic": _clean(attrs.get('RPL_THEME1')),
+                "household_composition": _clean(attrs.get('RPL_THEME2')),
+                "minority_status": _clean(attrs.get('RPL_THEME3')),
+                "housing_transportation": _clean(attrs.get('RPL_THEME4')),
+                "total_population": attrs.get('E_TOTPOP', 0),
+                "fips": attrs.get('FIPS', ''),
+                "data_source": "CDC/ATSDR SVI 2022",
+                "last_updated": datetime.now().isoformat()
+            }
+
+        logger.info(f"Bulk SVI fetch returned data for {len(result)} counties")
+        return result
+
+    except Exception as e:
+        logger.error(f"Bulk SVI fetch failed: {e}")
+        return {}
+
+
 def fetch_live_svi_data(county_name: str) -> Dict[str, Any]:
     """
     Fetch fresh SVI data from external API - FOR SCHEDULER USE ONLY.
@@ -315,63 +378,102 @@ def fetch_real_svi_data(county_name: str) -> Optional[Dict[str, Any]]:
 
 def create_default_svi_data():
     """
-    Create a default SVI data file with placeholder values
+    Populate SVI data file by fetching real CDC/ATSDR SVI 2022 data for all
+    72 Wisconsin counties via the ArcGIS REST API. Falls back to statewide
+    neutral defaults only if the API is unreachable.
     """
     svi_data_path = "./data/svi/wisconsin_svi_data.json"
-    
-    # Ensure data directory exists
     os.makedirs(os.path.dirname(svi_data_path), exist_ok=True)
-    
-    # Default data for all Wisconsin counties
-    # In a real implementation, this would be loaded from CDC SVI data
-    default_data = {
-        "dane": {
-            "overall": 0.35,
-            "socioeconomic": 0.3,
-            "household_composition": 0.4,
-            "minority_status": 0.5,
-            "housing_transportation": 0.2,
-            "last_updated": datetime.now().isoformat()
-        },
-        "milwaukee": {
-            "overall": 0.75,
-            "socioeconomic": 0.8,
-            "household_composition": 0.7,
-            "minority_status": 0.8,
-            "housing_transportation": 0.7,
-            "last_updated": datetime.now().isoformat()
-        },
-        "waukesha": {
-            "overall": 0.2,
-            "socioeconomic": 0.15,
-            "household_composition": 0.3,
-            "minority_status": 0.25,
-            "housing_transportation": 0.2,
-            "last_updated": datetime.now().isoformat()
-        },
-        "brown": {
-            "overall": 0.4,
-            "socioeconomic": 0.45,
-            "household_composition": 0.35,
-            "minority_status": 0.5,
-            "housing_transportation": 0.35,
-            "last_updated": datetime.now().isoformat()
-        },
-        "state_average": {
+
+    svi_data = {}
+
+    try:
+        url = ("https://onemap.cdc.gov/OneMapServices/rest/services/SVI/"
+               "CDC_ATSDR_Social_Vulnerability_Index_2022_USA/"
+               "FeatureServer/1/query")
+        params = {
+            'where': "ST_ABBR='WI'",
+            'outFields': ('FIPS,COUNTY,STATE,RPL_THEMES,RPL_THEME1,'
+                          'RPL_THEME2,RPL_THEME3,RPL_THEME4,E_TOTPOP'),
+            'f': 'json',
+            'returnGeometry': 'false',
+            'resultRecordCount': 100
+        }
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        features = data.get('features', [])
+
+        if features:
+            def _clean(v):
+                if v is None or v == -999:
+                    return None
+                return round(max(0, min(1, v)), 4)
+
+            for feature in features:
+                attrs = feature['attributes']
+                county = attrs.get('COUNTY', '').replace(' County', '').strip().lower()
+                if not county:
+                    continue
+                svi_data[county] = {
+                    "overall": _clean(attrs.get('RPL_THEMES')),
+                    "socioeconomic": _clean(attrs.get('RPL_THEME1')),
+                    "household_composition": _clean(attrs.get('RPL_THEME2')),
+                    "minority_status": _clean(attrs.get('RPL_THEME3')),
+                    "housing_transportation": _clean(attrs.get('RPL_THEME4')),
+                    "total_population": attrs.get('E_TOTPOP', 0),
+                    "fips": attrs.get('FIPS', ''),
+                    "data_source": "CDC/ATSDR SVI 2022",
+                    "last_updated": datetime.now().isoformat()
+                }
+
+            valid = [v for v in svi_data.values() if v['overall'] is not None]
+            if valid:
+                def _avg(key):
+                    vals = [v[key] for v in valid if v.get(key) is not None]
+                    return round(sum(vals) / len(vals), 4) if vals else 0.5
+
+                svi_data["state_average"] = {
+                    "overall": _avg("overall"),
+                    "socioeconomic": _avg("socioeconomic"),
+                    "household_composition": _avg("household_composition"),
+                    "minority_status": _avg("minority_status"),
+                    "housing_transportation": _avg("housing_transportation"),
+                    "total_population": sum(v['total_population'] for v in valid),
+                    "data_source": "CDC/ATSDR SVI 2022 (state average computed from county data)",
+                    "last_updated": datetime.now().isoformat()
+                }
+
+            logger.info(f"Fetched real CDC SVI 2022 data for {len(features)} Wisconsin counties")
+    except Exception as e:
+        logger.warning(f"Could not fetch CDC SVI data: {e}. Using neutral statewide defaults.")
+
+    if not svi_data:
+        for county_key in WI_COUNTY_FIPS:
+            svi_data[county_key] = {
+                "overall": 0.5,
+                "socioeconomic": 0.5,
+                "household_composition": 0.5,
+                "minority_status": 0.5,
+                "housing_transportation": 0.5,
+                "data_source": "statewide_average_fallback",
+                "last_updated": datetime.now().isoformat()
+            }
+        svi_data["state_average"] = {
             "overall": 0.5,
             "socioeconomic": 0.5,
             "household_composition": 0.5,
             "minority_status": 0.5,
             "housing_transportation": 0.5,
+            "data_source": "statewide_average_fallback",
             "last_updated": datetime.now().isoformat()
         }
-    }
-    
-    # Save default data to file
+
+    svi_data_sorted = dict(sorted(svi_data.items()))
     with open(svi_data_path, 'w') as f:
-        json.dump(default_data, f, indent=2)
-        
-    logger.info(f"Created default SVI data file at {svi_data_path}")
+        json.dump(svi_data_sorted, f, indent=2)
+
+    logger.info(f"Wrote SVI data file at {svi_data_path} with {len(svi_data_sorted)} entries")
 
 def clear_svi_cache():
     """

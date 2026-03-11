@@ -134,5 +134,6 @@ def is_scheduler_running() -> bool:
         from utils.data_refresh_scheduler import get_scheduler_status
         status = get_scheduler_status()
         return status.get('running', False)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Could not check scheduler status: {e}")
         return False

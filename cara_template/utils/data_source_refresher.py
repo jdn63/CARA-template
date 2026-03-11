@@ -34,18 +34,19 @@ def refresh_all_cdc_svi() -> Dict[str, Any]:
     """
     Refresh CDC Social Vulnerability Index data for all Wisconsin counties.
     Called annually by scheduler.
-    
-    IMPORTANT: Uses fetch_live_svi_data to bypass cache and always hit external API.
-    Wraps in app context for database access from background threads.
+
+    Uses a single bulk API call to fetch all 72 counties at once from the
+    CDC/ATSDR SVI 2022 ArcGIS REST API. Falls back to individual per-county
+    fetches only if the bulk call fails.
     """
     app = _get_app()
     if not app:
         return {'error': 'No Flask app available', 'success': 0, 'failed': 0}
-    
+
     with app.app_context():
         from utils.data_cache_manager import save_cached_data
-        from utils.svi_data import fetch_live_svi_data, WI_COUNTY_FIPS
-        
+        from utils.svi_data import fetch_bulk_svi_data, fetch_live_svi_data, WI_COUNTY_FIPS
+
         results = {
             'source_type': 'cdc_svi',
             'started_at': datetime.utcnow().isoformat(),
@@ -54,45 +55,91 @@ def refresh_all_cdc_svi() -> Dict[str, Any]:
             'fallback': 0,
             'errors': []
         }
-        
-        logger.info("Starting CDC SVI data refresh for all counties (using live fetch)")
-        
-        for county_name in WI_COUNTY_FIPS.keys():
-            try:
-                start_time = time.time()
-                # Use fetch_live_svi_data to bypass cache and hit external API
-                data = fetch_live_svi_data(county_name)
-                duration = time.time() - start_time
-                
-                used_fallback = data.get('_fallback', False) or data.get('data_source') == 'statewide_average'
-                fallback_reason = data.get('_fallback_reason', 'Using statewide average') if used_fallback else None
-                
-                success = save_cached_data(
-                    source_type='cdc_svi',
-                    data=data,
-                    county_name=county_name,
-                    fetch_duration=duration,
-                    api_source='CDC SVI API',
-                    used_fallback=used_fallback,
-                    fallback_reason=fallback_reason
-                )
-                
-                if success:
+
+        start_time = time.time()
+        bulk_data = fetch_bulk_svi_data()
+        bulk_duration = time.time() - start_time
+
+        if bulk_data:
+            logger.info(f"Bulk SVI fetch returned {len(bulk_data)} counties in {bulk_duration:.1f}s")
+            per_county_duration = bulk_duration / max(len(bulk_data), 1)
+
+            for county_name in WI_COUNTY_FIPS.keys():
+                try:
+                    data = bulk_data.get(county_name)
+                    used_fallback = data is None
+
                     if used_fallback:
-                        results['fallback'] += 1
+                        data = {
+                            "county": county_name.title(),
+                            "overall": 0.5, "socioeconomic": 0.5,
+                            "household_composition": 0.5, "minority_status": 0.5,
+                            "housing_transportation": 0.5,
+                            "data_source": "statewide_average",
+                            "_fallback": True,
+                            "_fallback_reason": "County not in bulk response",
+                            "last_updated": datetime.utcnow().isoformat()
+                        }
+
+                    success = save_cached_data(
+                        source_type='cdc_svi',
+                        data=data,
+                        county_name=county_name,
+                        fetch_duration=per_county_duration,
+                        api_source='CDC SVI 2022 ArcGIS (bulk)',
+                        used_fallback=used_fallback,
+                        fallback_reason=data.get('_fallback_reason') if used_fallback else None
+                    )
+
+                    if success:
+                        if used_fallback:
+                            results['fallback'] += 1
+                        else:
+                            results['success'] += 1
                     else:
-                        results['success'] += 1
-                else:
+                        results['failed'] += 1
+
+                except Exception as e:
                     results['failed'] += 1
-                    
-            except Exception as e:
-                results['failed'] += 1
-                results['errors'].append({'county': county_name, 'error': str(e)})
-                logger.error(f"Error refreshing SVI for {county_name}: {e}")
-        
+                    results['errors'].append({'county': county_name, 'error': str(e)})
+                    logger.error(f"Error saving SVI for {county_name}: {e}")
+        else:
+            logger.warning("Bulk SVI fetch failed, falling back to individual county fetches")
+            for county_name in WI_COUNTY_FIPS.keys():
+                try:
+                    county_start = time.time()
+                    data = fetch_live_svi_data(county_name)
+                    duration = time.time() - county_start
+
+                    used_fallback = data.get('_fallback', False) or data.get('data_source') == 'statewide_average'
+                    fallback_reason = data.get('_fallback_reason', 'Using statewide average') if used_fallback else None
+
+                    success = save_cached_data(
+                        source_type='cdc_svi',
+                        data=data,
+                        county_name=county_name,
+                        fetch_duration=duration,
+                        api_source='CDC SVI API',
+                        used_fallback=used_fallback,
+                        fallback_reason=fallback_reason
+                    )
+
+                    if success:
+                        if used_fallback:
+                            results['fallback'] += 1
+                        else:
+                            results['success'] += 1
+                    else:
+                        results['failed'] += 1
+
+                except Exception as e:
+                    results['failed'] += 1
+                    results['errors'].append({'county': county_name, 'error': str(e)})
+                    logger.error(f"Error refreshing SVI for {county_name}: {e}")
+
         results['finished_at'] = datetime.utcnow().isoformat()
         logger.info(f"CDC SVI refresh complete: {results['success']} success, {results['fallback']} fallback, {results['failed']} failed")
-        
+
         return results
 
 

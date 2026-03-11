@@ -9,8 +9,8 @@ HERC risk calculations when cache is cold.
 # Default is 30, but HERC calculations can take longer on first request
 timeout = 180
 
-# Number of workers
-workers = 2
+# Number of workers (3 workers x 4 threads = 12 concurrent request slots)
+workers = 3
 
 # Disable reload in production (enabled via CLI --reload flag for development)
 reload = False

@@ -44,43 +44,43 @@ def get_all_herc_regions() -> List[Dict[str, Any]]:
                 {
                     "id": "1",
                     "name": "HERC Region 1 (Northwest)",
-                    "counties": ["Ashland", "Bayfield", "Burnett", "Douglas", "Iron", "Sawyer", "Washburn"],
+                    "counties": ["Ashland", "Barron", "Bayfield", "Burnett", "Chippewa", "Douglas", "Dunn", "Eau Claire", "Pepin", "Pierce", "Polk", "Rusk", "Sawyer", "St. Croix", "Washburn"],
                     "color": "#FF9F1C"
                 },
                 {
                     "id": "2",
                     "name": "HERC Region 2 (North Central)",
-                    "counties": ["Florence", "Forest", "Langlade", "Lincoln", "Marathon", "Oneida", "Portage", "Taylor", "Vilas", "Wood"],
+                    "counties": ["Clark", "Forest", "Iron", "Langlade", "Lincoln", "Marathon", "Oneida", "Portage", "Price", "Taylor", "Vilas", "Wood"],
                     "color": "#2EC4B6"
                 },
                 {
                     "id": "3",
                     "name": "HERC Region 3 (Northeast)",
-                    "counties": ["Brown", "Door", "Kewaunee", "Marinette", "Menominee", "Oconto", "Shawano"],
+                    "counties": ["Brown", "Door", "Florence", "Kewaunee", "Manitowoc", "Marinette", "Oconto"],
                     "color": "#E71D36"
                 },
                 {
                     "id": "4",
                     "name": "HERC Region 4 (Western)",
-                    "counties": ["Barron", "Chippewa", "Dunn", "Eau Claire", "Pepin", "Pierce", "Polk", "St. Croix"],
+                    "counties": ["Buffalo", "Crawford", "Jackson", "La Crosse", "Monroe", "Trempealeau", "Vernon"],
                     "color": "#011627"
                 },
                 {
                     "id": "5",
                     "name": "HERC Region 5 (South Central)",
-                    "counties": ["Adams", "Buffalo", "Clark", "Columbia", "Crawford", "Dane", "Dodge", "Grant", "Green", "Iowa", "Jackson", "Juneau", "La Crosse", "Lafayette", "Monroe", "Richland", "Rock", "Sauk", "Trempealeau", "Vernon"],
+                    "counties": ["Adams", "Columbia", "Dane", "Dodge", "Grant", "Green", "Iowa", "Jefferson", "Juneau", "Lafayette", "Marquette", "Richland", "Rock", "Sauk"],
                     "color": "#6A4C93"
                 },
                 {
                     "id": "6",
                     "name": "HERC Region 6 (Fox Valley)",
-                    "counties": ["Calumet", "Fond du Lac", "Green Lake", "Manitowoc", "Marquette", "Outagamie", "Sheboygan", "Waupaca", "Waushara", "Winnebago"],
+                    "counties": ["Calumet", "Green Lake", "Menominee", "Outagamie", "Shawano", "Waupaca", "Waushara", "Winnebago"],
                     "color": "#1982C4"
                 },
                 {
                     "id": "7",
                     "name": "HERC Region 7 (Southeast)",
-                    "counties": ["Jefferson", "Kenosha", "Milwaukee", "Ozaukee", "Racine", "Walworth", "Washington", "Waukesha"],
+                    "counties": ["Fond du Lac", "Kenosha", "Milwaukee", "Ozaukee", "Racine", "Sheboygan", "Walworth", "Washington", "Waukesha"],
                     "color": "#8AC926"
                 }
             ]

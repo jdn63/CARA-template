@@ -98,8 +98,8 @@ def create_app(config_overrides=None):
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "pool_recycle": 300,      # Recycle connections after 5 minutes
         "pool_pre_ping": True,    # Verify connections before using
-        "pool_size": 10,          # Number of connections to maintain
-        "max_overflow": 20,       # Additional connections allowed
+        "pool_size": 3,           # Number of connections to maintain per worker
+        "max_overflow": 5,        # Additional connections allowed per worker
         "pool_timeout": 30        # Timeout waiting for connection
     }
     
