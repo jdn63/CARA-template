@@ -110,10 +110,21 @@ def create_app(config_overrides=None):
     # Initialize database with app context
     db.init_app(app)
     
-    # Import models to ensure all tables are created
+    # Import models and create tables with retry logic for constrained DB plans
+    import time as _time
     with app.app_context():
-        import models  # Import all models for table creation
-        db.create_all()  # Create all database tables
+        import models  # noqa: F401
+        for _attempt in range(5):
+            try:
+                db.create_all()
+                break
+            except Exception as _e:
+                if _attempt < 4:
+                    logger.warning(f"db.create_all() attempt {_attempt+1} failed: {_e}, retrying in 5s")
+                    _time.sleep(5)
+                else:
+                    logger.error(f"db.create_all() failed after 5 attempts: {_e}")
+                    raise
     
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"

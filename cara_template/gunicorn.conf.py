@@ -10,10 +10,10 @@ import os
 # Default is 30, but HERC calculations can take longer on first request
 timeout = 180
 
-# Number of workers (2 workers x 4 threads = 8 concurrent request slots)
-workers = 2
+# Single worker with threads to minimize DB connections on Render Basic Postgres
+workers = 1
 
-# Use threaded workers
+# Use threaded workers for concurrency
 threads = 4
 
 # Preload the app before forking workers to share memory and reduce
