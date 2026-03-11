@@ -3,7 +3,7 @@ import os
 import json
 import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -40,8 +40,49 @@ DOMAINS = [
     ("utilities_risk", "Utilities"),
 ]
 
-SCORES_CACHE_PATH = os.path.join(tempfile.gettempdir(), "cara_em_comparison_scores.json")
+SCORES_CACHE_KEY = "em_comparison_scores"
 SCORES_MAX_AGE = 86400
+
+
+def _get_cached_scores_from_db():
+    try:
+        from core import db
+        from models import DataSourceCache
+        from sqlalchemy import desc
+        entry = db.session.query(DataSourceCache).filter(
+            DataSourceCache.source_type == SCORES_CACHE_KEY,
+            DataSourceCache.is_valid == True
+        ).order_by(desc(DataSourceCache.fetched_at)).first()
+        if entry:
+            age = (datetime.utcnow() - entry.fetched_at).total_seconds()
+            if age < SCORES_MAX_AGE:
+                return entry.data
+    except Exception as e:
+        logger.warning(f"Error reading EM scores from DB cache: {e}")
+    return None
+
+
+def _save_scores_to_db(result):
+    try:
+        from core import db
+        from models import DataSourceCache
+        db.session.query(DataSourceCache).filter(
+            DataSourceCache.source_type == SCORES_CACHE_KEY
+        ).delete()
+        entry = DataSourceCache(
+            source_type=SCORES_CACHE_KEY,
+            data=result,
+            fetched_at=datetime.utcnow(),
+            expires_at=datetime.utcnow() + timedelta(seconds=SCORES_MAX_AGE),
+            is_valid=True,
+            api_source="cara_internal"
+        )
+        db.session.add(entry)
+        db.session.commit()
+        logger.info(f"Saved EM comparison scores to DB cache ({result.get('count', 0)} jurisdictions)")
+    except Exception as e:
+        logger.error(f"Error saving EM scores to DB cache: {e}")
+        db.session.rollback()
 
 
 def precompute_comparison_scores():
@@ -79,21 +120,13 @@ def precompute_comparison_scores():
         "rows": rows,
     }
 
-    with open(SCORES_CACHE_PATH, "w") as f:
-        json.dump(result, f)
-
-    logger.info(f"Pre-computed {len(rows)} jurisdiction scores to {SCORES_CACHE_PATH}")
+    _save_scores_to_db(result)
+    logger.info(f"Pre-computed {len(rows)} jurisdiction scores")
     return result
 
 
 def load_precomputed_scores():
-    if not os.path.exists(SCORES_CACHE_PATH):
-        return None
-    age = time.time() - os.path.getmtime(SCORES_CACHE_PATH)
-    if age > SCORES_MAX_AGE:
-        return None
-    with open(SCORES_CACHE_PATH) as f:
-        return json.load(f)
+    return _get_cached_scores_from_db()
 
 
 def generate_em_comparison_export():
