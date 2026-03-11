@@ -252,14 +252,15 @@ def em_comparison_export():
     """Generate downloadable Excel comparing PH vs EM risk scores for all jurisdictions"""
     try:
         from utils.em_comparison_export import generate_em_comparison_export, load_precomputed_scores, precompute_comparison_scores
-        import threading
 
         scores = load_precomputed_scores()
         if not scores:
-            threading.Thread(target=_precompute_em_scores_background, daemon=True).start()
-            return render_template('error.html',
-                               message="The PH vs EM comparison data is being generated for the first time. "
-                                       "This takes about 2-3 minutes. Please come back to this page and try again shortly.")
+            logger.info("No pre-computed EM comparison scores found, computing synchronously")
+            precompute_comparison_scores()
+            scores = load_precomputed_scores()
+            if not scores:
+                return render_template('error.html',
+                                   message="Unable to generate comparison data. Please try again.")
 
         logger.info("Generating EM comparison Excel from pre-computed scores")
         excel_path = generate_em_comparison_export()
@@ -272,21 +273,9 @@ def em_comparison_export():
         )
     except Exception as e:
         logger.error(f"Error generating EM comparison export: {str(e)}")
+        logger.exception("Full traceback:")
         return render_template('error.html',
                            message="An error occurred while generating the comparison export. Please try again.")
-
-
-def _precompute_em_scores_background():
-    """Background thread to pre-compute EM comparison scores"""
-    try:
-        from main import app
-        with app.app_context():
-            from utils.em_comparison_export import precompute_comparison_scores
-            logger.info("Starting background pre-computation of EM comparison scores")
-            precompute_comparison_scores()
-            logger.info("Background pre-computation of EM comparison scores complete")
-    except Exception as e:
-        logger.error(f"Error in background EM score pre-computation: {str(e)}")
 
 
 @dashboard_bp.route('/print-summary/<jurisdiction_id>')
