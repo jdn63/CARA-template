@@ -148,13 +148,18 @@ def create_app(config_overrides=None):
     # Register blueprints with routes (routes moved from app.py to blueprints)
     register_blueprints(app)
     
-    # Initialize background services (scheduler, etc.)
-    initialize_background_services(app)
-    
-    # Start export job worker in background - only in development or when explicitly enabled
-    # In production with Gunicorn, multiple workers would start multiple schedulers causing conflicts
-    # Use ENABLE_EXPORT_WORKER=true to enable in production if running single-worker mode
-    enable_worker = (
+    # Only start background services (scheduler, export worker) on the first
+    # gunicorn worker to avoid duplicate schedulers and excess DB connections.
+    # In development (no GUNICORN_WORKER_ID set) or on worker 1, start services.
+    worker_id = os.environ.get("GUNICORN_WORKER_ID")
+    is_primary_worker = worker_id is None or worker_id == "1"
+
+    if is_primary_worker:
+        initialize_background_services(app)
+    else:
+        logger.info(f"Skipping background services on worker {worker_id}")
+
+    enable_worker = is_primary_worker and (
         os.environ.get("ENABLE_EXPORT_WORKER", "").lower() == "true" or
         os.environ.get("REPLIT_DEV_DOMAIN") is not None or
         os.environ.get("FLASK_ENV") == "development"
