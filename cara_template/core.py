@@ -92,15 +92,15 @@ def create_app(config_overrides=None):
         # Production: Let ProxyFix handle scheme/host from headers
         app.config["PREFERRED_URL_SCHEME"] = "https"
     
-    # Database configuration with connection pooling for production use
+    # Database configuration -- use NullPool to avoid holding open connections.
+    # NullPool opens a connection only for each query and closes it immediately,
+    # keeping concurrent connection count minimal for Render Basic Postgres.
+    from sqlalchemy.pool import NullPool
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_recycle": 300,      # Recycle connections after 5 minutes
-        "pool_pre_ping": True,    # Verify connections before using
-        "pool_size": 1,           # Connections to maintain per worker (1 x 2 workers = 2 base)
-        "max_overflow": 1,        # Additional overflow per worker (1 x 2 = 2 overflow)
-        "pool_timeout": 30        # Timeout waiting for connection
+        "poolclass": NullPool,
+        "pool_pre_ping": True,
     }
     
     # Apply any configuration overrides (useful for testing)
