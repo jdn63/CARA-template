@@ -193,7 +193,7 @@ def get_census_data(county_name):
     wisconsin_census = WisconsinCensusDataLoader()
     return {
         'mobile_home_percentage': wisconsin_census.get_mobile_home_percentage(county_name),
-        'pct_aged_65_plus': wisconsin_census.get_elderly_population_percentage(county_name),
+        'elderly_percentage': wisconsin_census.get_elderly_population_percentage(county_name),
         'total_population': wisconsin_census.get_county_population(county_name)
     }
 ```

@@ -45,9 +45,7 @@ def compute_display_scores(risk_data):
         'active_shooter': 'active_shooter_risk', 
         'extreme_heat': 'extreme_heat_risk',
         'cybersecurity': 'cybersecurity_risk',
-        'air_quality': 'air_quality_risk',
-        'dam_failure': 'dam_failure_risk',
-        'vector_borne_disease': 'vector_borne_disease_risk'
+        'air_quality': 'air_quality_risk'
     }
     
     for normalized_key, field_name in major_risks.items():
@@ -94,8 +92,6 @@ def format_risk_name(risk_key):
         'extreme_heat': 'Extreme Heat Risk',
         'cybersecurity': 'Cybersecurity Risk',
         'air_quality': 'Air Quality Risk',
-        'dam_failure': 'Dam Failure Risk',
-        'vector_borne_disease': 'Vector-Borne Disease Risk',
         'flood': 'Flood Risk',
         'tornado': 'Tornado Risk',
         'winter_storm': 'Winter Storm Risk',

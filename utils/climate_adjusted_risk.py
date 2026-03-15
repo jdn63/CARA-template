@@ -383,7 +383,7 @@ class ClimateAdjustedHeatRisk:
         
         # Apply additional vulnerability factors specific to extreme heat
         heat_specific_adjustments = {
-            'elderly_population': 1.2,      # Adults aged 65+ at higher risk
+            'elderly_population': 1.2,      # Older adults at higher risk
             'chronic_conditions': 1.15,     # Diabetes, heart disease, respiratory
             'medication_effects': 1.1,      # Medications affecting heat regulation
             'housing_quality': 1.18,        # Poor AC, insulation, older housing

@@ -42,16 +42,16 @@ def download_wisconsin_census_data(api_key=None):
             logger.error(f"Mobile home data request failed: {mobile_response.status_code}")
             return False
         
-        # Download population aged 65+ data (Table DP05)
-        logger.info("Downloading population 65+ data...")
+        # Download elderly population data (Table DP05)
+        logger.info("Downloading elderly population data...")
         elderly_url = f"https://api.census.gov/data/2022/acs/acs5/profile?get=NAME,DP05_0024PE,DP05_0001E&for=county:*&in=state:{wisconsin_fips}&key={api_key}"
         
         elderly_response = requests.get(elderly_url, timeout=30)
         if elderly_response.status_code == 200:
             elderly_data = elderly_response.json()
-            logger.info(f"Downloaded population 65+ data for {len(elderly_data)-1} counties")
+            logger.info(f"Downloaded elderly population data for {len(elderly_data)-1} counties")
         else:
-            logger.error(f"Population 65+ data request failed: {elderly_response.status_code}")
+            logger.error(f"Elderly population data request failed: {elderly_response.status_code}")
             return False
         
         # Process mobile home data
@@ -61,7 +61,7 @@ def download_wisconsin_census_data(api_key=None):
         mobile_df['total_housing_units'] = pd.to_numeric(mobile_df['B25024_001E'], errors='coerce')
         mobile_df['mobile_home_percentage'] = (mobile_df['mobile_homes'] / mobile_df['total_housing_units'] * 100).round(2)
         
-        # Process population aged 65+ data  
+        # Process elderly population data  
         elderly_df = pd.DataFrame(elderly_data[1:], columns=elderly_data[0])
         elderly_df['county_name'] = elderly_df['NAME'].str.replace(' County, Wisconsin', '')
         elderly_df['total_population'] = pd.to_numeric(elderly_df['DP05_0001E'], errors='coerce')

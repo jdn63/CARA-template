@@ -239,13 +239,13 @@ Once you have gathered population and demographic data for your jurisdictions, u
 
 > Please replace the Wisconsin demographic data with data for [YOUR COUNTRY/REGION]. Here is our population data:
 >
-> | Jurisdiction | Total Population | Population 65+ | Pct Aged 65+ |
+> | Jurisdiction | Total Population | Population 65+ | Elderly Percentage |
 > |---|---|---|---|
 > | [Name 1] | [number] | [number] | [percentage] |
 > | [Name 2] | [number] | [number] | [percentage] |
 > | [... continue for all jurisdictions] |
 >
-> Make sure the jurisdiction names in the demographic data exactly match the jurisdiction names we set up earlier. If we do not have population aged 65+ data, use a reasonable estimate based on [YOUR COUNTRY]'s national demographics and note in the methodology page that these are estimates.
+> Make sure the jurisdiction names in the demographic data exactly match the jurisdiction names we set up earlier. If we do not have elderly population data, use a reasonable estimate based on [YOUR COUNTRY]'s national demographics and note in the methodology page that these are estimates.
 
 If you do not have exact data yet, you can use this alternative prompt:
 

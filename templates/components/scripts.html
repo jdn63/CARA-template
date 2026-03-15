@@ -8,6 +8,9 @@
 <script type="module" src="{{ url_for('static', filename='js/modules/navigation.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/modules/accessibility.js') }}"></script>
 
+<!-- Legacy Support (for browsers that don't support ES6 modules) -->
+<script nomodule src="{{ url_for('static', filename='js/legacy/main-legacy.js') }}"></script>
+
 <!-- Legacy Navigation Support -->
 <script src="{{ url_for('static', filename='js/modules/legacy-navigation.js') }}"></script>
 

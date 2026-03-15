@@ -5,12 +5,12 @@ The CARA platform includes comprehensive security features to protect Wisconsin 
 
 ## Security Features
 
-### API Key Authentication
+### 🔐 API Key Authentication
 All API endpoints under `/api/*` require valid API keys for access:
 
 **Access Levels:**
 - **Admin**: Full system access (scheduler, data refresh)
-- **Write**: Data modification capabilities
+- **Write**: Data modification capabilities  
 - **Readonly**: View data only (recommended for most users)
 
 **Authentication Methods:**
@@ -18,12 +18,12 @@ All API endpoints under `/api/*` require valid API keys for access:
 2. **Authorization**: `Authorization: Bearer your_api_key_here`
 3. **Query Parameter**: `?api_key=your_api_key_here`
 
-### Rate Limiting
+### 🚫 Rate Limiting
 - **General**: 1000 requests/hour, 100 requests/minute
 - **API Endpoints**: 300 requests/hour, 60 requests/minute
 - Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 
-### Security Headers
+### 🛡️ Security Headers
 - **Content Security Policy**: Prevents XSS attacks
 - **Strict Transport Security**: Forces HTTPS
 - **X-Frame-Options**: Prevents clickjacking
@@ -50,7 +50,7 @@ All API endpoints under `/api/*` require valid API keys for access:
 ### Successful API Call
 ```bash
 curl -H "X-API-Key: cara_ro_1757433000_abc123..." \
-https://cara.replit.app/api/herc-regions
+     https://cara.replit.app/api/herc-regions
 ```
 
 ### Failed Authentication
@@ -79,20 +79,20 @@ Contact the CARA development team with:
 import requests
 
 def safe_api_call(endpoint, api_key):
-headers = {'X-API-Key': api_key}
-try:
-response = requests.get(endpoint, headers=headers)
-if response.status_code == 401:
-# Handle authentication error
-print("API key invalid or expired")
-elif response.status_code == 429:
-# Handle rate limiting
-print("Rate limit exceeded, wait before retrying")
-elif response.status_code == 200:
-return response.json()
-except requests.RequestException as e:
-print(f"Request failed: {e}")
-return None
+    headers = {'X-API-Key': api_key}
+    try:
+        response = requests.get(endpoint, headers=headers)
+        if response.status_code == 401:
+            # Handle authentication error
+            print("API key invalid or expired")
+        elif response.status_code == 429:
+            # Handle rate limiting
+            print("Rate limit exceeded, wait before retrying")
+        elif response.status_code == 200:
+            return response.json()
+    except requests.RequestException as e:
+        print(f"Request failed: {e}")
+    return None
 ```
 
 ## Monitoring and Logging

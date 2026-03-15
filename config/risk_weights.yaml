@@ -10,38 +10,32 @@
 #
 # WEIGHT RATIONALE:
 # Weights reflect the relative frequency, severity, and breadth of public health
-# impact for each hazard type in Wisconsin, informed by:
-#   - FEMA National Risk Index annualized expected loss data for Wisconsin
+# impact for each hazard type, informed by:
+#   - FEMA National Risk Index annualized expected loss data
 #   - CDC PHEP (Public Health Emergency Preparedness) capability priorities
-#   - Wisconsin DHS Hazard Vulnerability Assessment guidance
+#   - State/local Hazard Vulnerability Assessment guidance
 #   - Historical disaster declaration frequency (FEMA, 2000-2024)
 #
-# Natural Hazards (28%): Highest weight because FEMA NRI data shows natural
-#   hazards produce the largest annualized expected losses in WI. Covers 4 sub-types
+# Natural Hazards (33%): Highest weight because FEMA NRI data shows natural
+#   hazards produce the largest annualized expected losses. Covers 4 sub-types
 #   (flood, tornado, winter storm, thunderstorm), each with independent data sources.
-#   Reduced from 33% since dam failure is now a separate domain.
-# Health Metrics (17%): Infectious disease is a core PHEP capability.
-#   Reduced from 20% since vector-borne disease is now a separate domain.
-# Active Shooter (18%): CDC/ASPR identifies active shooter as a high-consequence
-#   threat requiring dedicated PHEP planning.
-# Air Quality (12%): EPA data shows increasing wildfire smoke episodes affecting WI.
-# Extreme Heat (11%): NOAA data shows heat as the leading weather-related cause
-#   of death nationally; WI's northern latitude tempers exposure.
-# Dam Failure (7%): Standalone domain using NID data, WI DNR dam inventory,
-#   and FEMA flood data. Separated from natural hazards for granular assessment.
-# Vector-Borne Disease (7%): Lyme disease (WI top-5 nationally), West Nile Virus,
-#   Anaplasmosis. Uses WI DHS surveillance data and climate-adjusted exposure models.
+# Health Metrics (20%): Infectious disease is a core PHEP capability; weighted
+#   equally with active shooter to reflect comparable community-wide impact.
+# Active Shooter (20%): CDC/ASPR identifies active shooter as a high-consequence
+#   threat requiring dedicated PHEP planning; weighted equally with health metrics.
+# Air Quality (14%): EPA data shows increasing wildfire smoke episodes;
+#   weighted to reflect growing but still geographically uneven impact.
+# Extreme Heat (13%): NOAA data shows heat as the leading weather-related cause
+#   of death nationally; weighted slightly below air quality.
 #
 # These weights are configurable. Jurisdictions may adjust them based on local
 # hazard profiles and planning priorities. Changes should be documented.
 overall_risk_weights:
-  natural_hazards: 0.28    # 28% - Natural disasters, weather events (FEMA NRI, CDC SVI, NOAA)
-  health_metrics: 0.17     # 17% - Disease surveillance, healthcare capacity (WI DHS, CDC)
-  active_shooter: 0.18     # 18% - Active shooter and violence risk (GVA, FBI, Census)
-  extreme_heat: 0.11       # 11% - Heat vulnerability and climate risk (NWS, NOAA)
-  air_quality: 0.12        # 12% - Environmental health, AQI assessment (EPA AirNow)
-  dam_failure: 0.07        # 7% - Dam/levee failure risk (NID, WI DNR, FEMA NRI flood)
-  vector_borne_disease: 0.07  # 7% - Tick/mosquito-borne disease (WI DHS, CDC ArboNET)
+  natural_hazards: 0.33    # 33% - Natural disasters, weather events (FEMA NRI, CDC SVI, NOAA)
+  health_metrics: 0.20     # 20% - Disease surveillance, healthcare capacity (CDC)
+  active_shooter: 0.20     # 20% - Active shooter and violence risk (GVA, FBI, Census)
+  extreme_heat: 0.13       # 13% - Heat vulnerability and climate risk (NWS, NOAA)
+  air_quality: 0.14        # 14% - Environmental health, AQI assessment (EPA AirNow)
 
 # Supplementary Domains (modeled from proxy indicators, NOT included in PHRAT score)
 # These are displayed separately on the dashboard for planning context
@@ -75,7 +69,7 @@ temporal_weights:
   strategic_planning:
     baseline: 0.60    # 60% - Long-term structural risks (1-10 years)
     seasonal: 0.25    # 25% - Predictable cyclical variations
-    trend: 0.15       # 15% - Medium-term directional changes (real data from NOAA/FEMA/Census)
+    trend: 0.15       # 15% - Medium-term directional changes
     acute: 0.00       # 0% - Short-term events (shown for context only)
   
   # Emergency Response Mode (future implementation)
@@ -84,15 +78,6 @@ temporal_weights:
     seasonal: 0.20    # 20% - Seasonal context
     trend: 0.10       # 10% - Trend awareness
     acute: 0.40       # 40% - Immediate events drive decisions
-
-  # Domain-specific temporal weight overrides
-  # These override the mode-level weights for specific risk domains
-  domain_overrides:
-    infectious_disease:
-      baseline: 0.60    # 60% - Long-term structural health risk
-      seasonal: 0.25    # 25% - Respiratory illness seasonality (flu/RSV peaks)
-      trend: 0.00       # 0% - Disabled: county-level ID trend data insufficient
-      acute: 0.15       # 15% - Active surveillance: WI DHS respiratory reports, outbreak alerts
 
 # Active Shooter Risk Domain Weights (must sum to 1.0)
 active_shooter_weights:
@@ -107,7 +92,7 @@ active_shooter_weights:
 # with climate change projections applied to the exposure component.
 # Thunderstorm risk uses independent NOAA Storm Events Database severity data.
 natural_hazards_weights:
-  flood: 0.25           # Equal weight - FEMA NRI + NOAA/WICCI climate projections
+  flood: 0.25           # Equal weight - FEMA NRI + NOAA climate projections
   tornado: 0.25         # Equal weight - FEMA NRI + NOAA/IPCC climate projections
   winter_storm: 0.25    # Equal weight - FEMA NRI + climate projections
   thunderstorm: 0.25    # Equal weight - NOAA Storm Events Database + EPA/NOAA projections
@@ -127,27 +112,27 @@ natural_hazards_svi_vulnerability_weights:
   flood:
     housing_transportation: 0.30   # Housing quality, flood zone structures
     socioeconomic: 0.20            # Recovery capacity, insurance access
-    household_composition: 0.15    # Aged 65+/disabled evacuation challenges
+    household_composition: 0.15    # Elderly/disabled evacuation challenges
     minority_status: 0.10          # Language barriers, equitable warning access
-    # Census factors: aged_65_plus_pct (0.15), mobile_home_pct (0.10)
+    # Census factors: elderly_pct (0.15), mobile_home_pct (0.10)
   tornado:
     housing_transportation: 0.25   # Mobile homes, building structural integrity
     socioeconomic: 0.15            # Shelter access, recovery resources
     household_composition: 0.10    # Vulnerable populations
     minority_status: 0.10          # Warning access, language barriers
-    # Census factors: mobile_home_pct (0.25), aged_65_plus_pct (0.10), pop_density (0.05)
+    # Census factors: mobile_home_pct (0.25), elderly_pct (0.10), pop_density (0.05)
   winter_storm:
     housing_transportation: 0.20   # Heating infrastructure, vehicle access
     socioeconomic: 0.10            # Heating affordability, weatherization
-    household_composition: 0.15    # Aged 65+ cold vulnerability
+    household_composition: 0.15    # Elderly cold vulnerability
     minority_status: 0.05          # Language barriers for warnings
-    # Census factors: aged_65_plus_pct (0.20), mobile_home_pct (0.05), power_grid_vuln (0.15), rural_isolation (0.10)
+    # Census factors: elderly_pct (0.20), mobile_home_pct (0.05), power_grid_vuln (0.15), rural_isolation (0.10)
   thunderstorm:
     housing_transportation: 0.25   # Building stock, structural protection
     socioeconomic: 0.10            # Recovery and insurance
     household_composition: 0.10    # Vulnerable populations
     minority_status: 0.05          # Warning access
-    # Census factors: aged_65_plus_pct (0.10), mobile_home_pct (0.10), flood_suscept (0.15), tree_coverage (0.15)
+    # Census factors: elderly_pct (0.10), mobile_home_pct (0.10), flood_suscept (0.15), tree_coverage (0.15)
 
 # Resilience Component Inputs (per hazard type)
 # Resilience score (0-1) is computed from socioeconomic SVI inverse,
@@ -159,7 +144,7 @@ natural_hazards_resilience_inputs:
     # Plus hazard-specific base resilience factors
 
 # Climate Change Projection Multipliers (applied to exposure component)
-# Source: NOAA, IPCC AR6, WICCI 2021, EPA
+# Source: NOAA, IPCC AR6, EPA
 # Period: 2030-2050, Baseline: 1986-2005, Scenario: RCP4.5/SSP2-4.5
 # Region-specific values stored in data/climate/natural_hazard_climate_projections.json
 climate_projection_ranges:
@@ -173,7 +158,7 @@ health_metrics_weights:
   respiratory_illness: 0.40    # 40% - ILI, COVID, RSV surveillance
   vaccination_coverage: 0.25   # 25% - Community immunity levels
   healthcare_capacity: 0.20    # 20% - Hospital beds, staffing
-  vulnerable_populations: 0.15 # 15% - Aged 65+, immunocompromised
+  vulnerable_populations: 0.15 # 15% - Elderly, immunocompromised
 
 # Extreme Heat Sub-domain Weights (within extreme_heat domain)
 extreme_heat_weights:
@@ -184,12 +169,12 @@ extreme_heat_weights:
 
 # Jurisdiction-Specific Overrides
 # Format: jurisdiction_id or county_name
+# Example: Override weights for a specific high-risk urban jurisdiction
 jurisdiction_overrides:
-  # Example for high-risk urban areas
-  milwaukee_county:
-    overall_risk_weights:
-      active_shooter: 0.25    # Increase active shooter weight for urban area
-      natural_hazards: 0.28   # Adjust natural hazards weight
+  # example_county_a:
+  #   overall_risk_weights:
+  #     active_shooter: 0.25    # Increase active shooter weight for urban area
+  #     natural_hazards: 0.28   # Adjust natural hazards weight
 
 # Normalization Configuration
 normalization:
@@ -239,29 +224,25 @@ contribution_logging:
 # WEIGHT RATIONALE (EM):
 # Weights reflect emergency management priorities informed by:
 #   - FEMA Comprehensive Preparedness Guide (CPG) 201
-#   - Wisconsin Emergency Management (WEM) hazard mitigation planning guidance
+#   - State/local hazard mitigation planning guidance
 #   - National Infrastructure Protection Plan (NIPP) framework
 #   - EMAP (Emergency Management Accreditation Program) standards
 #
 # Key differences from Public Health weights:
-#   - Natural Hazards increased (32%): Infrastructure damage is the primary EM concern
+#   - Natural Hazards increased (38%): Infrastructure damage is the primary EM concern
 #   - Utilities elevated to primary (10%): Critical infrastructure disruption is core EM
-#   - Extreme Heat increased (13%): Infrastructure stress (power grid, roads)
-#   - Dam Failure increased (8%): EM prioritizes infrastructure failure scenarios
-#   - Health Metrics decreased (10%): Still relevant but secondary to infrastructure
-#   - Active Shooter decreased (13%): EM focuses on response, not prevention
-#   - Air Quality decreased (8%): Less direct infrastructure impact
-#   - Vector-Borne Disease (6%): Environmental health monitoring
+#   - Extreme Heat increased (15%): Infrastructure stress (power grid, roads)
+#   - Health Metrics decreased (12%): Still relevant but secondary to infrastructure
+#   - Active Shooter decreased (15%): EM focuses on response, not prevention
+#   - Air Quality decreased (10%): Less direct infrastructure impact
 
 em_overall_risk_weights:
-  natural_hazards: 0.32    # 32% - Infrastructure damage from natural disasters
-  health_metrics: 0.10     # 10% - Healthcare system capacity/surge
-  active_shooter: 0.13     # 13% - Mass casualty incident response
-  extreme_heat: 0.13       # 13% - Power grid stress, infrastructure degradation
-  air_quality: 0.08        # 8% - Shelter-in-place, HVAC system impacts
+  natural_hazards: 0.38    # 38% - Infrastructure damage from natural disasters
+  health_metrics: 0.12     # 12% - Healthcare system capacity/surge
+  active_shooter: 0.15     # 15% - Mass casualty incident response
+  extreme_heat: 0.15       # 15% - Power grid stress, infrastructure degradation
+  air_quality: 0.10        # 10% - Shelter-in-place, HVAC system impacts
   utilities: 0.10          # 10% - Critical infrastructure disruption (elevated from supplementary)
-  dam_failure: 0.08        # 8% - Dam/levee failure infrastructure impact
-  vector_borne_disease: 0.06  # 6% - Environmental health monitoring
 
 # EM Vulnerability Weights within EVR Natural Hazards
 # Shifts emphasis from population health to critical infrastructure
@@ -320,4 +301,4 @@ em_resilience_inputs:
 version: '2.5.0'
 last_updated: '2026-02-24'
 updated_by: 'CARA Development Team'
-description: 'Comprehensive risk assessment weights for Wisconsin public health and emergency management strategic planning'
+description: 'Comprehensive risk assessment weights for public health and emergency management strategic planning'

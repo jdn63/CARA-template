@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <p class="text-muted">Generated for: {{ risk_data.location }} on {{ current_date }}</p>
             <p class="alert alert-info">
-                <span class="badge bg-info">v2.4</span> Comprehensive Wisconsin coverage: 95 unique public health departments (84 local health departments + 11 tribal nations) across 7 HERC regions.
+                <span class="badge bg-info">v2.4</span> Comprehensive jurisdiction coverage across all configured public health departments and regions.
             </p>
             <div class="alert alert-info mt-2">
                 <strong>Strategic Planning Risk Assessment:</strong> This summary provides risk analysis optimized for annual preparedness planning. Risk scores emphasize structural baseline factors (60%) and seasonal patterns (25%) to support strategic resource allocation decisions. Current events shown for context but do not drive long-term planning recommendations.
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>
                             {# Map risk names to data sources #}
                             {% if risk_name == 'health' %}
-                                Wisconsin DHS Weekly Respiratory Report
+                                State Health Department Respiratory Report
                             {% elif risk_name == 'cybersecurity' %}
                                 HHS Breach Portal, FBI IC3 Report, CISA KEV
                             {% elif risk_name == 'extreme_heat' %}
@@ -88,10 +88,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 FEMA NRI, NOAA NCEI Storm Events, WICCI Climate Projections, CDC SVI, Census ACS
                             {% elif risk_name == 'thunderstorm' %}
                                 NOAA NCEI Storm Events, FEMA NRI, CDC SVI, Census ACS, EPA/NOAA Climate Projections
-                            {% elif risk_name == 'dam_failure' %}
-                                WI DNR Dam Safety Database, USACE National Inventory of Dams, OpenFEMA NFIP Claims, CDC SVI, Census ACS
-                            {% elif risk_name == 'vector_borne_disease' %}
-                                Wisconsin DHS Tick-Borne Surveillance, CDC ArboNET, USDA Forest Service NLCD, Wisconsin DNR, CDC SVI, Census ACS, NOAA/WICCI Climate Projections
                             {% else %}
                                 FEMA NRI, NOAA Historical Data, CDC SVI, Census ACS
                             {% endif %}
@@ -103,23 +99,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% elif risk_name == 'cybersecurity' %}
                                 Weighted combination of reported breaches (40%), cybercrime reports (35%), and critical vulnerabilities (25%)
                             {% elif risk_name == 'extreme_heat' %}
-                                EVR framework: Exposure (FEMA NRI heat risk, climate projections), Vulnerability (4 CDC SVI themes, population aged 65+ (%), urban heat island), Resilience (cooling infrastructure, healthcare capacity). Health impact factor applied.
+                                EVR framework: Exposure (FEMA NRI heat risk, climate projections), Vulnerability (4 CDC SVI themes, elderly %, urban heat island), Resilience (cooling infrastructure, healthcare capacity). Health impact factor applied.
                             {% elif risk_name == 'active_shooter' %}
                                 5-domain framework: Historical Incident Density (25%), School & Youth Vulnerability (20%), Social & Community Fragility (20%), Mental Health Risk (20%), Access to Lethal Means (15%)
                             {% elif risk_name == 'air_quality' %}
                                 Long-term air quality risk based on Canadian wildfire smoke trends (2019-2024) and climate projections (2025-2050)
                             {% elif risk_name == 'flood' %}
-                                EVR framework: Exposure (FEMA NRI flood risk, river/lake proximity, terrain, precipitation, climate trend), Vulnerability (4 CDC SVI themes, population aged 65+ (%), mobile home %), Resilience (socioeconomic capacity, flood protection infrastructure). NOAA historical event counts and OpenFEMA claims data used for validation.
+                                EVR framework: Exposure (FEMA NRI flood risk, river/lake proximity, terrain, precipitation, climate trend), Vulnerability (4 CDC SVI themes, elderly %, mobile home %), Resilience (socioeconomic capacity, flood protection infrastructure). NOAA historical event counts and OpenFEMA claims data used for validation.
                             {% elif risk_name == 'tornado' %}
-                                EVR framework: Exposure (FEMA NRI tornado risk, tornado alley proximity, open terrain, climate trend), Vulnerability (4 CDC SVI themes, mobile home %, population aged 65+ (%), population density), Resilience (community preparedness, socioeconomic capacity). NOAA historical tornado events and EF ratings used for validation.
+                                EVR framework: Exposure (FEMA NRI tornado risk, tornado alley proximity, open terrain, climate trend), Vulnerability (4 CDC SVI themes, mobile home %, elderly %, population density), Resilience (community preparedness, socioeconomic capacity). NOAA historical tornado events and EF ratings used for validation.
                             {% elif risk_name == 'winter_storm' %}
-                                EVR framework: Exposure (FEMA NRI winter risk, northern location, lake effect, ice storm climate trend), Vulnerability (4 CDC SVI themes, population aged 65+ (%), power grid vulnerability, rural isolation), Resilience (winter preparedness, northern community experience). NOAA historical winter events used for validation.
+                                EVR framework: Exposure (FEMA NRI winter risk, northern location, lake effect, ice storm climate trend), Vulnerability (4 CDC SVI themes, elderly %, power grid vulnerability, rural isolation), Resilience (winter preparedness, northern community experience). NOAA historical winter events used for validation.
                             {% elif risk_name == 'thunderstorm' %}
-                                EVR framework: Exposure (NOAA severity index, lightning density, heavy rainfall frequency, climate trend), Vulnerability (4 CDC SVI themes, population aged 65+ (%), mobile home %, flood susceptibility, tree coverage), Resilience (community preparedness, socioeconomic capacity). NOAA historical thunderstorm events used for validation.
-                            {% elif risk_name == 'dam_failure' %}
-                                EVR framework: Exposure (dam density from WI DNR Dam Safety Database, hazard classification severity, flood zone overlap from NFIP claims), Vulnerability (est. % of county population in dam inundation zones based on high/significant hazard dam counts and storage capacity, 4 CDC SVI themes, population aged 65+ (%)), Resilience (emergency action plans, inspection programs, socioeconomic capacity). Real dam inventory data from WI DNR (~4,100 active dams statewide).
-                            {% elif risk_name == 'vector_borne_disease' %}
-                                EVR framework: Exposure (historical Lyme/WNV case rates, forest cover, deer density, seasonal factors, climate trend), Vulnerability (outdoor workforce %, elderly %, rural factor, SVI socioeconomic themes), Resilience (surveillance programs, public awareness, healthcare access). Seasonal adjustment for tick season (Apr-Oct) and mosquito season (Jun-Sep).
+                                EVR framework: Exposure (NOAA severity index, lightning density, heavy rainfall frequency, climate trend), Vulnerability (4 CDC SVI themes, elderly %, mobile home %, flood susceptibility, tree coverage), Resilience (community preparedness, socioeconomic capacity). NOAA historical thunderstorm events used for validation.
                             {% else %}
                                 EVR framework: Exposure-Vulnerability-Resilience calculation with health impact factor
                             {% endif %}
@@ -215,20 +207,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <li>Responder Safety and Health</li>
                                     <li>Information Sharing</li>
                                 </ul>
-                                {% elif risk_name == 'dam_failure' %}
-                                <ul class="mb-0">
-                                    <li>Emergency Operations Coordination</li>
-                                    <li>Mass Care</li>
-                                    <li>Emergency Public Information and Warning</li>
-                                    <li>Community Preparedness</li>
-                                </ul>
-                                {% elif risk_name == 'vector_borne_disease' %}
-                                <ul class="mb-0">
-                                    <li>Public Health Surveillance and Epidemiological Investigation</li>
-                                    <li>Community Preparedness</li>
-                                    <li>Emergency Public Information and Warning</li>
-                                    <li>Information Sharing</li>
-                                </ul>
                                 {% else %}
                                 <ul class="mb-0">
                                     <li>Emergency Operations Coordination</li>
@@ -302,20 +280,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <li>Establish trauma care protocols</li>
                                     <li>Coordinate with law enforcement agencies</li>
                                 </ul>
-                                {% elif risk_name == 'dam_failure' %}
-                                <ul class="mb-0">
-                                    <li>Review and update dam emergency action plans</li>
-                                    <li>Map downstream inundation zones and evacuation routes</li>
-                                    <li>Coordinate with Wisconsin DNR Dam Safety Program</li>
-                                    <li>Conduct dam failure tabletop exercises with downstream communities</li>
-                                </ul>
-                                {% elif risk_name == 'vector_borne_disease' %}
-                                <ul class="mb-0">
-                                    <li>Enhance tick and mosquito surveillance programs</li>
-                                    <li>Develop public education campaigns on tick bite prevention</li>
-                                    <li>Coordinate with WI DHS on Lyme disease reporting and monitoring</li>
-                                    <li>Monitor climate-driven range expansion of tick and mosquito vectors</li>
-                                </ul>
                                 {% else %}
                                 <ul class="mb-0">
                                     <li>Establish backup power and communications systems</li>
@@ -338,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <p><strong>Report Generation Date:</strong> {{ current_date }}</p>
             <p><small class="text-muted">For methodology details, visit: https://caratool.org/methodology</small></p>
             <div class="alert alert-warning mt-2 small">
-                This report was generated using CARA (Comprehensive Automated Risk Assessment) <strong>v2.1</strong>, developed as a research project at Georgetown University in collaboration with Wisconsin health departments. While it uses official data sources, users should verify critical information with their authoritative sources when making major decisions.
+                This report was generated using CARA (Comprehensive Automated Risk Assessment) <strong>v2.1</strong>, developed as an open-source project for public health emergency preparedness risk assessment. While it uses official data sources, users should verify critical information with their authoritative sources when making major decisions.
                 <div class="mt-2">
                     <strong>Research Tool Notice:</strong> This platform is designed for strategic planning support and educational purposes. All recommendations should be validated through established emergency management protocols and local expertise before implementation.
                 </div>

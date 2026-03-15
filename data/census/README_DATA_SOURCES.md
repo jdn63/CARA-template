@@ -9,29 +9,29 @@ This directory contains county-specific Census data files that provide accurate 
 **Purpose**: Mobile home percentages for housing vulnerability assessments
 **Data Source**: American Community Survey 5-Year Estimates, Table B25024
 **Download URL**: https://data.census.gov/table/ACSDT5Y2022.B25024
-**Filter Settings**:
+**Filter Settings**: 
 - Geography: Wisconsin (State: 55) > All Counties
 - Variables: B25024_010E (Mobile homes), B25024_001E (Total housing units)
 
 **Required Columns**:
 - `county_name` - County name (e.g., "Adams", "Brown")
 - `total_housing_units` - Total housing units in county
-- `mobile_homes` - Number of mobile homes
+- `mobile_homes` - Number of mobile homes  
 - `mobile_home_percentage` - Calculated percentage (mobile_homes/total_housing_units * 100)
 
-### 2. wisconsin_demographics.csv
+### 2. wisconsin_demographics.csv  
 **Purpose**: Age demographics and population data
 **Data Source**: ACS 5-Year Demographic Profile, Table DP05
 **Download URL**: https://data.census.gov/table/ACSDP5Y2022.DP05
 **Filter Settings**:
-- Geography: Wisconsin (State: 55) > All Counties
+- Geography: Wisconsin (State: 55) > All Counties  
 - Variables: DP05_0024PE (Percent 65+), DP05_0001E (Total population)
 
 **Required Columns**:
 - `county_name` - County name (e.g., "Adams", "Brown")
 - `total_population` - Total county population
 - `population_65_plus` - Population aged 65 and older
-- `elderly_percentage` - Percent of population aged 65 and older
+- `elderly_percentage` - Percent of population 65+ 
 
 ## How to Update Data
 
@@ -56,16 +56,16 @@ This directory contains county-specific Census data files that provide accurate 
 
 ## Tribal Jurisdiction Handling
 The system automatically maps tribal jurisdictions to appropriate proxy counties:
-- Ho-Chunk Jackson County
-- Oneida Brown County
-- Bad River Ashland County
-- Red Cliff Bayfield County
-- Lac du Flambeau Vilas County
+- Ho-Chunk → Jackson County
+- Oneida → Brown County  
+- Bad River → Ashland County
+- Red Cliff → Bayfield County
+- Lac du Flambeau → Vilas County
 - And others...
 
 ## Benefits of Local Data
- **County-specific accuracy** - Real data for each Wisconsin county
- **No API failures** - Reliable file-based loading
- **Strategic planning focus** - Stable baseline data
- **Offline capability** - Works without internet
- **Data transparency** - Clear source documentation
+✅ **County-specific accuracy** - Real data for each Wisconsin county  
+✅ **No API failures** - Reliable file-based loading
+✅ **Strategic planning focus** - Stable baseline data
+✅ **Offline capability** - Works without internet
+✅ **Data transparency** - Clear source documentation

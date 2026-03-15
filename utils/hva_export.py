@@ -171,7 +171,7 @@ def generate_kaiser_hva_export(risk_data: dict) -> str:
         # Calculate risk scores and add data rows
         for i, hazard in enumerate(hva_hazards, 9):
             # Calculate total risk score (Probability × Human Impact × Business Impact / Preparedness)
-            total_risk = (hazard['probability'] * hazard['human_impact'] * hazard['business_impact']) / max(1, hazard['preparedness'])
+            total_risk = (hazard['probability'] * hazard['human_impact'] * hazard['business_impact']) / hazard['preparedness']
             hazard['total_risk'] = total_risk
             
             # Add row data

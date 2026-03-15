@@ -1,3 +1,17 @@
+# =============================================================================
+# WISCONSIN-SPECIFIC MODULE (Regional/Tribal)
+# =============================================================================
+# This module manages Healthcare Emergency Readiness Coalition (HERC) region data,
+# a Wisconsin-specific regional grouping of counties for hospital preparedness.
+#
+# FOR OTHER JURISDICTIONS: This module supports optional regional groupings.
+# Replace the HERC data with your own regional structure (e.g., health districts,
+# governorates, provinces) or leave it disabled if regional grouping is not needed.
+# The example_regions.json file shows the expected format.
+#
+# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
+# =============================================================================
+
 """
 HERC (Healthcare Emergency Readiness Coalition) Data Management Module
 

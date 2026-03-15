@@ -1,3 +1,15 @@
+# =============================================================================
+# WISCONSIN-SPECIFIC MODULE
+# =============================================================================
+# This module integrates with the Wisconsin Hospital Association (WHA) data portal
+# for real-time hospital capacity information.
+#
+# FOR OTHER JURISDICTIONS: Replace with your hospital association or health ministry's
+# capacity reporting system, or remove if not applicable.
+#
+# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
+# =============================================================================
+
 """Module for integrating Wisconsin Hospital Association (WHA) data"""
 import logging
 import os

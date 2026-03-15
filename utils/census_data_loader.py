@@ -100,7 +100,7 @@ class WisconsinCensusDataLoader:
     
     def get_elderly_population_percentage(self, county_name: str) -> Optional[float]:
         """
-        Get population aged 65+ percentage for a Wisconsin county from local data
+        Get elderly population percentage for a Wisconsin county from local data
         
         Args:
             county_name: Name of Wisconsin county (without 'County' suffix)
@@ -132,11 +132,11 @@ class WisconsinCensusDataLoader:
                     return elderly_pct
             
             # Fallback to Wisconsin average
-            logger.warning(f"No local population 65+ data found for {clean_county}, using state average")
+            logger.warning(f"No local elderly population data found for {clean_county}, using state average")
             return 18.7
             
         except Exception as e:
-            logger.error(f"Error retrieving population 65+ data for {county_name}: {str(e)}")
+            logger.error(f"Error retrieving elderly population data for {county_name}: {str(e)}")
             return 18.7
     
     def get_county_population(self, county_name: str) -> Optional[int]:

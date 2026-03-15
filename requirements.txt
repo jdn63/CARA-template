@@ -30,5 +30,3 @@ openpyxl
 apscheduler
 pypdf
 python-docx
-census
-us

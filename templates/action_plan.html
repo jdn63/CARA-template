@@ -196,20 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <li>Medical Surge</li>
                                 <li>Community Preparedness</li>
                             </ul>
-                            {% elif hazard == 'dam_failure' %}
-                            <ul>
-                                <li>Emergency Operations Coordination</li>
-                                <li>Mass Care</li>
-                                <li>Emergency Public Information and Warning</li>
-                                <li>Community Preparedness</li>
-                            </ul>
-                            {% elif hazard == 'vector_borne_disease' %}
-                            <ul>
-                                <li>Public Health Surveillance and Epidemiological Investigation</li>
-                                <li>Community Preparedness</li>
-                                <li>Emergency Public Information and Warning</li>
-                                <li>Information Sharing</li>
-                            </ul>
                             {% else %}
                             <ul>
                                 <li>Emergency Operations Coordination</li>
@@ -413,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <h6>Short-term (1-3 months)</h6>
                                     <ul>
                                         <li>Develop multilingual heat health communication materials for diverse communities</li>
-                                        <li>Create coordinated outreach systems for adults aged 65 and older, persons with disabilities, and socially isolated residents</li>
+                                        <li>Create coordinated outreach systems for elderly, disabled, and socially isolated residents</li>
                                         <li>Train healthcare providers on recognition and treatment of heat-related illnesses</li>
                                         <li>Establish data sharing protocols with emergency departments for syndromic surveillance</li>
                                     </ul>
@@ -483,62 +469,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <li>Implement targeted outreach for medically vulnerable populations</li>
                                     </ul>
                                 </div>
-                                {% elif hazard == 'dam_failure' %}
-                                <div class="timeline-item">
-                                    <h6>Immediate (0-30 days)</h6>
-                                    <ul>
-                                        <li>Review dam emergency action plans and verify notification procedures</li>
-                                        <li>Map downstream inundation zones and identify vulnerable populations</li>
-                                        <li>Verify emergency communication systems for dam failure alerts</li>
-                                        <li>Assess medical supply inventory for potential mass evacuation</li>
-                                    </ul>
-                                </div>
-                                <div class="timeline-item">
-                                    <h6>Short-term (1-3 months)</h6>
-                                    <ul>
-                                        <li>Establish evacuation protocols for downstream communities</li>
-                                        <li>Coordinate with Wisconsin DNR Dam Safety Program on inspection schedules</li>
-                                        <li>Develop public health response plans for water contamination post-dam failure</li>
-                                        <li>Train staff on dam failure notification and mass care procedures</li>
-                                    </ul>
-                                </div>
-                                <div class="timeline-item">
-                                    <h6>Long-term (3-12 months)</h6>
-                                    <ul>
-                                        <li>Conduct dam failure tabletop exercises with downstream communities</li>
-                                        <li>Develop long-term recovery plans for dam failure scenarios</li>
-                                        <li>Establish cross-jurisdictional agreements for mutual aid during dam emergencies</li>
-                                        <li>Assess infrastructure vulnerability and advocate for dam safety improvements</li>
-                                    </ul>
-                                </div>
-                                {% elif hazard == 'vector_borne_disease' %}
-                                <div class="timeline-item">
-                                    <h6>Immediate (0-30 days)</h6>
-                                    <ul>
-                                        <li>Review current tick and mosquito surveillance data and reporting systems</li>
-                                        <li>Develop seasonal public education materials on tick bite prevention</li>
-                                        <li>Identify high-risk outdoor recreation and occupational areas</li>
-                                        <li>Establish clinical guidance for healthcare providers on Lyme disease diagnosis</li>
-                                    </ul>
-                                </div>
-                                <div class="timeline-item">
-                                    <h6>Short-term (1-3 months)</h6>
-                                    <ul>
-                                        <li>Implement integrated pest management strategies for vector control</li>
-                                        <li>Coordinate with WI DHS on enhanced Lyme disease case reporting</li>
-                                        <li>Develop targeted outreach for outdoor workers, hunters, and rural communities</li>
-                                        <li>Train healthcare providers on recognition of anaplasmosis and ehrlichiosis</li>
-                                    </ul>
-                                </div>
-                                <div class="timeline-item">
-                                    <h6>Long-term (3-12 months)</h6>
-                                    <ul>
-                                        <li>Establish ongoing vector surveillance monitoring with habitat assessment</li>
-                                        <li>Develop climate adaptation plans for expanding tick and mosquito ranges</li>
-                                        <li>Build partnerships with wildlife management agencies for deer population monitoring</li>
-                                        <li>Create community-based prevention programs for high-incidence areas</li>
-                                    </ul>
-                                </div>
                                 {% else %}
                                 <div class="timeline-item">
                                     <h6>Immediate (0-30 days)</h6>
@@ -582,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="row mt-4">
         <div class="col-12">
             <div class="alert alert-warning mt-2 small">
-                This action plan was generated using CARA (Comprehensive Automated Risk Assessment) <strong>v2.1</strong>, developed as a research project at Georgetown University in collaboration with Wisconsin health departments. While it uses official data sources, users should verify critical information with their authoritative sources when making major decisions.
+                This action plan was generated using CARA (Comprehensive Automated Risk Assessment) <strong>v2.1</strong>, developed as an open-source project for public health emergency preparedness risk assessment. While it uses official data sources, users should verify critical information with their authoritative sources when making major decisions.
                 <div class="mt-2">
                     <strong>Research Tool Notice:</strong> This platform is designed for strategic planning support and educational purposes. All recommendations should be validated through established emergency management protocols and local expertise before implementation.
                 </div>

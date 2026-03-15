@@ -182,7 +182,7 @@ class ExtremeHeatMetrics:
     
     def get_elderly_population_percentage(self, county_name: str) -> Optional[float]:
         """
-        Get population aged 65+ percentage from local Census data files
+        Get elderly population percentage from local Census data files
         
         Strategic Planning Mode: Uses county-specific Census data from local files
         
@@ -201,11 +201,11 @@ class ExtremeHeatMetrics:
                 logger.info(f"Local data: {county_name} has {elderly_pct}% elderly population")
                 return elderly_pct
             else:
-                logger.warning(f"No local population 65+ data found for {county_name}, using fallback")
+                logger.warning(f"No local elderly population data found for {county_name}, using fallback")
                 return get_wisconsin_elderly_population(county_name)
             
         except Exception as e:
-            logger.error(f"Error getting population 65+ data for {county_name}: {e}")
+            logger.error(f"Error getting elderly population data for {county_name}: {e}")
             return get_wisconsin_elderly_population(county_name)
     
     def get_heat_related_ed_visits(self, county_name: str, year: Optional[int] = None) -> Optional[int]:
@@ -238,19 +238,18 @@ class ExtremeHeatMetrics:
                 population = wisconsin_census.get_county_population(county_name)
                 if population is None:
                     population = 50000  # Default if not found
-            except Exception as e:
-                logger.debug(f"Census data unavailable for {county_name}, using fallback: {e}")
-                population = 50000
+            except Exception:
+                population = 50000  # Fallback default
             
             # Estimate ED visits based on national averages
             # CDC data shows ~2-4 heat-related ED visits per 100,000 population annually
-            # Higher for urban areas, adults aged 65+
+            # Higher for urban areas, elderly populations
             base_rate = 3.0  # per 100,000
             
             # Adjust for county characteristics
             elderly_pct = self.get_elderly_population_percentage(county_name) or 15.0
             if elderly_pct > 18:
-                base_rate *= 1.3  # Higher risk for adults aged 65+
+                base_rate *= 1.3  # Higher risk for elderly populations
             
             # Urban areas typically have higher rates
             if county_name in ['Milwaukee', 'Dane', 'Brown']:

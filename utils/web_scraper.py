@@ -31,7 +31,7 @@ def get_wi_health_departments():
     try:
         # DHS Wisconsin Local Health Departments page
         url = "https://www.dhs.wisconsin.gov/lh-depts/index.htm"
-        response = requests.get(url, timeout=30)
+        response = requests.get(url)
         
         if response.status_code != 200:
             logger.error(f"Failed to fetch health departments: Status code {response.status_code}")
@@ -90,7 +90,7 @@ def get_wi_tribal_health_departments():
     try:
         # DHS Wisconsin Tribal Health Centers page
         url = "https://www.dhs.wisconsin.gov/tribal-affairs/index.htm"
-        response = requests.get(url, timeout=30)
+        response = requests.get(url)
         
         if response.status_code != 200:
             logger.error(f"Failed to fetch tribal health departments: Status code {response.status_code}")

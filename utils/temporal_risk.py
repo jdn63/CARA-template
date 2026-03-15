@@ -71,8 +71,9 @@ class TemporalRiskComponent:
         self.acute = 0.0
         self.last_calculated = None
         
+        # Load weights from configuration manager
         config_manager = get_config_manager()
-        self.weights = config_manager.get_temporal_weights('strategic_planning', risk_type=risk_type)
+        self.weights = config_manager.get_temporal_weights('strategic_planning')
         logger.info(f"Loaded temporal weights for {risk_type}: {self.weights}")
         
         # Get historical data for calculations
@@ -136,19 +137,13 @@ class TemporalRiskComponent:
         logger.info(f"Calculated temporal components for {self.county_name}, {self.risk_type}: " +
                    f"B={self.baseline:.2f}, S={self.seasonal:.2f}, T={self.trend:.2f}, A={self.acute:.2f}")
         
-        trend_metadata = getattr(self, '_trend_metadata', None)
-        
-        result = {
+        # Return components as a dictionary
+        return {
             'baseline': float(self.baseline),
             'seasonal': float(self.seasonal),
             'trend': float(self.trend),
             'acute': float(self.acute)
         }
-        
-        if trend_metadata:
-            result['trend_metadata'] = trend_metadata
-        
-        return result
     
     def get_composite_score(self) -> float:
         """
@@ -279,44 +274,59 @@ class TemporalRiskComponent:
     
     def _calculate_trend(self) -> float:
         """
-        Calculate trend component using real data from cached sources.
+        Calculate trend component by analyzing risk changes over time.
         
-        Uses the real_trend_calculator module which compares actual historical
-        event counts from NOAA Storm Events, OpenFEMA, climate projections,
-        and Census data rather than synthetic data.
-        
-        Returns 0-1 scale: 0.5 = no trend, >0.5 = increasing risk, <0.5 = decreasing
+        Positive trend = increasing risk
+        Negative trend = decreasing risk
         """
+        # Insufficient data for trend analysis
+        if len(self.historical_data) < 6:  # Need at least 6 data points
+            return 0.0  # No trend component with limited data
+            
+        # Sort data by date
+        sorted_data = []
+        for item in self.historical_data:
+            if 'date' in item:
+                try:
+                    data_date = datetime.strptime(item['date'], '%Y-%m-%d')
+                    risk_value = self._extract_risk_value(item)
+                    if risk_value is not None:
+                        sorted_data.append((data_date, risk_value))
+                except (ValueError, TypeError):
+                    pass
+                    
+        # Sort by date
+        sorted_data.sort(key=lambda x: x[0])
+        
+        # Not enough dated points for trend
+        if len(sorted_data) < 6:
+            return 0.0
+            
+        # Calculate simple linear regression
+        # Use normalized time values (0-1) and risk values
+        x_values = [(i / (len(sorted_data) - 1)) for i in range(len(sorted_data))]
+        y_values = [item[1] for item in sorted_data]
+        
+        # Calculate slope using least squares method
+        n = len(sorted_data)
+        sum_x = sum(x_values)
+        sum_y = sum(y_values)
+        sum_xy = sum(x*y for x, y in zip(x_values, y_values))
+        sum_xx = sum(x*x for x in x_values)
+        
+        # Calculate slope (trend)
         try:
-            from utils.real_trend_calculator import get_trend_score
+            slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x)
+        except ZeroDivisionError:
+            return 0.0
             
-            trend_data = get_trend_score(self.risk_type, self.county_name)
-            
-            if trend_data is None:
-                logger.info(f"Trend disabled for {self.risk_type} (using acute instead)")
-                self._trend_metadata = {
-                    'score': 0.0,
-                    'data_source': 'Trend disabled',
-                    'description': 'Acute surveillance used instead of trend for this domain'
-                }
-                return 0.0
-            
-            self._trend_metadata = trend_data
-            score = trend_data.get('score', 0.5)
-            
-            logger.info(f"Real trend for {self.risk_type} in {self.county_name}: "
-                       f"{score:.3f} ({trend_data.get('data_source', 'unknown')})")
-            
-            return score
-            
-        except Exception as e:
-            logger.error(f"Error in real trend calculation for {self.risk_type}: {e}")
-            self._trend_metadata = {
-                'score': 0.5,
-                'data_source': 'Fallback',
-                'description': f'Error calculating trend: {str(e)}'
-            }
-            return 0.5
+        # Normalize slope to -1 to 1 range (typical slopes are between -0.5 and 0.5)
+        normalized_slope = max(-1.0, min(1.0, slope * 2))
+        
+        # Convert to 0-1 scale where 0.5 is no trend, >0.5 is increasing, <0.5 is decreasing
+        trend_score = 0.5 + (normalized_slope / 2)
+        
+        return trend_score
     
     def _check_for_active_events(self) -> float:
         """
@@ -523,52 +533,25 @@ class TemporalRiskComponent:
             return 0.0
     
     def _check_disease_outbreaks(self) -> float:
-        """
-        Check for active disease outbreaks using WI DHS surveillance data.
-        
-        Evaluates current respiratory illness activity levels (flu, COVID-19, RSV)
-        and vaccination coverage gaps to produce an acute risk score.
-        """
+        """Check for active disease outbreaks affecting this jurisdiction"""
         try:
-            from utils.disease_surveillance import calculate_infectious_disease_risk
+            # In a real implementation, this would connect to a disease
+            # surveillance system or API to get current outbreak status
             
-            disease_data = calculate_infectious_disease_risk(self.jurisdiction_id)
+            # Simplified implementation: Check if recent respiratory disease
+            # metrics are significantly elevated
+            # Import DHS data functionality (fallback if not available)
+            # DHS data connector replaced with strategic planning approach
+            # Using simplified baseline risk calculation for strategic planning
+            logger.debug("Using strategic planning baseline risk calculation")
             
-            if not disease_data or 'risk_score' not in disease_data:
-                logger.debug(f"No disease surveillance data for {self.jurisdiction_id}, using baseline")
-                return 0.1
-            
-            risk_score = float(disease_data.get('risk_score', 0.3))
-            
-            activity_levels = disease_data.get('activity_levels', {})
-            elevated_count = 0
-            for disease, level in activity_levels.items():
-                if isinstance(level, str) and level.lower() in ('high', 'very high', 'very_high'):
-                    elevated_count += 1
-                elif isinstance(level, str) and level.lower() == 'moderate':
-                    elevated_count += 0.5
-            
-            if elevated_count >= 2:
-                acute_boost = 0.2
-            elif elevated_count >= 1:
-                acute_boost = 0.1
-            else:
-                acute_boost = 0.0
-            
-            acute_score = min(0.95, risk_score * 0.7 + acute_boost)
-            
-            vaccination_gap = disease_data.get('vaccination_gap_score', 0.0)
-            if vaccination_gap > 0.3:
-                acute_score = min(0.95, acute_score + 0.05)
-            
-            logger.info(f"Disease acute score for {self.county_name}: {acute_score:.2f} "
-                       f"(base risk: {risk_score:.2f}, elevated diseases: {elevated_count})")
-            
-            return acute_score
+            # For strategic planning mode, we use baseline outbreak risk
+            # instead of real-time surveillance data
+            return 0.1  # Default baseline risk for strategic planning
             
         except Exception as e:
-            logger.warning(f"Error checking disease outbreaks for {self.county_name}: {str(e)}")
-            return 0.1
+            logger.warning(f"Error checking disease outbreaks: {str(e)}")
+            return 0.1  # Return low baseline value instead of zero
     
     def _check_infrastructure_disruptions(self) -> float:
         """Check for active infrastructure disruptions affecting this jurisdiction"""

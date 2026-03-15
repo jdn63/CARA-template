@@ -1,3 +1,15 @@
+# =============================================================================
+# WISCONSIN-SPECIFIC MODULE
+# =============================================================================
+# This module integrates with Wisconsin Emergency Management (WEM) WebEOC system
+# for real-time emergency resource data.
+#
+# FOR OTHER JURISDICTIONS: Replace with your emergency management agency's API
+# or data system integration, or remove if not applicable.
+#
+# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
+# =============================================================================
+
 """Module for integrating Wisconsin Emergency Management (WEM) WebEOC data"""
 import logging
 import os
