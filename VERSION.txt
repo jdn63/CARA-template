@@ -1,11 +1,14 @@
 CARA - Comprehensive Automated Risk Assessment
 Version: 2.5
 Release date: 2026-03-15
-Push: v20
+Push: v21
 
 Changelog summary:
+- v21: Update GitHub Actions to Node.js 24-compatible versions:
+  actions/checkout@v3 -> @v4, actions/setup-python@v4 -> @v5
 - v20: README replaced with clean 7-domain version; county_baselines.yaml
-  force-committed to fix CI test failures in CARA-template
+  force-committed to fix CI test failures in CARA-template; VERSION.txt
+  canary file added to confirm successful pushes
 - v19: Geometric tribal county weights via spatial overlay (EPSG:3174);
   trust land inclusion; Ho-Chunk Nation expanded to 13 counties; tribal
   metadata excluded from Risk Summary and Action Plan; Tribal Nation
