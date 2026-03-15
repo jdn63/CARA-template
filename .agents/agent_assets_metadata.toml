@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "tMczGHNmVaQBvl5Jpd6k6"
+uri = "file://cara_wisconsin_github.zip"
+type = "unspecified"
+title = "CARA v18 (updated) — Main Repo"
+
+[[outputs]]
+id = "syPiqIC3DPtRUPwgSZDp_"
+uri = "file://cara_template_github.zip"
+type = "unspecified"
+title = "CARA v18 (updated) — Template Repo"

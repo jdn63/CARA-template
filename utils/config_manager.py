@@ -8,6 +8,7 @@ including jurisdiction-specific overrides, normalization settings, and contribut
 import os
 import yaml
 import logging
+import threading
 from typing import Dict, Any, Optional, List, Tuple
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, MinMaxScaler
 import numpy as np
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 class RiskConfigManager:
     """
     Manages risk assessment configuration including weights, normalization, and logging settings.
+    All mutable state is protected by a threading lock for concurrent access safety.
     """
     
     def __init__(self, config_path: str = 'config/risk_weights.yaml'):
@@ -26,6 +28,7 @@ class RiskConfigManager:
         self.jurisdiction_cache = {}
         self.scalers = {}
         self.contribution_logs = []
+        self._lock = threading.Lock()
         self.load_config()
     
     def load_config(self) -> None:
@@ -100,17 +103,29 @@ class RiskConfigManager:
         
         return base_weights
     
-    def get_temporal_weights(self, mode: str = 'strategic_planning') -> Dict[str, float]:
+    def get_temporal_weights(self, mode: str = 'strategic_planning', risk_type: str = None) -> Dict[str, float]:
         """
-        Get temporal component weights based on planning mode.
+        Get temporal component weights based on planning mode and optional risk type.
+        
+        If a domain-specific override exists for the risk_type, those weights
+        are returned instead of the mode-level defaults.
         
         Args:
             mode: Planning mode ('strategic_planning' or 'emergency_response')
+            risk_type: Optional risk domain for domain-specific overrides
             
         Returns:
             Dictionary of temporal component weights
         """
         temporal_config = self.config.get('temporal_weights', {})
+        
+        if risk_type:
+            domain_overrides = temporal_config.get('domain_overrides', {})
+            if risk_type in domain_overrides:
+                override = domain_overrides[risk_type]
+                logger.info(f"Using domain-specific temporal weights for {risk_type}: {override}")
+                return override
+        
         mode_weights = temporal_config.get(mode, temporal_config.get('strategic_planning', {}))
         
         if not mode_weights:
@@ -153,50 +168,45 @@ class RiskConfigManager:
         score_names = list(scores.keys())
         score_values = np.array(list(scores.values())).reshape(-1, 1)
         
-        # Get or create scaler for this domain
         scaler_key = f"{domain}_{method}"
-        if scaler_key not in self.scalers:
-            if method == 'zscore':
-                self.scalers[scaler_key] = StandardScaler()
-            elif method == 'quantile':
-                n_quantiles = min(100, len(score_values))  # Ensure we have enough samples
-                self.scalers[scaler_key] = QuantileTransformer(n_quantiles=n_quantiles)
-            elif method == 'minmax':
-                self.scalers[scaler_key] = MinMaxScaler()
-            else:
-                logger.warning(f"Unknown normalization method: {method}")
+        with self._lock:
+            if scaler_key not in self.scalers:
+                if method == 'zscore':
+                    self.scalers[scaler_key] = StandardScaler()
+                elif method == 'quantile':
+                    n_quantiles = min(100, len(score_values))
+                    self.scalers[scaler_key] = QuantileTransformer(n_quantiles=n_quantiles)
+                elif method == 'minmax':
+                    self.scalers[scaler_key] = MinMaxScaler()
+                else:
+                    logger.warning(f"Unknown normalization method: {method}")
+                    return scores
+
+            try:
+                if len(score_values) == 1:
+                    logger.debug(f"Single value normalization skipped for domain {domain}")
+                    return scores
+
+                if not hasattr(self.scalers[scaler_key], 'scale_'):
+                    normalized_values = self.scalers[scaler_key].fit_transform(score_values)
+                else:
+                    normalized_values = self.scalers[scaler_key].transform(score_values)
+
+                normalized_scores = {}
+                for i, name in enumerate(score_names):
+                    normalized_scores[name] = float(normalized_values[i][0])
+
+                if method == 'zscore' and normalization_config.get('zscore', {}).get('clip_outliers', False):
+                    threshold = normalization_config.get('zscore', {}).get('outlier_threshold', 3.0)
+                    for name in normalized_scores:
+                        normalized_scores[name] = np.clip(normalized_scores[name], -threshold, threshold)
+
+                logger.debug(f"Applied {method} normalization to {domain} scores")
+                return normalized_scores
+
+            except Exception as e:
+                logger.error(f"Error during normalization: {e}")
                 return scores
-        
-        try:
-            # For single values, we need to handle carefully
-            if len(score_values) == 1:
-                # Can't normalize a single value meaningfully
-                logger.debug(f"Single value normalization skipped for domain {domain}")
-                return scores
-            
-            # Fit and transform (or just transform if already fitted)
-            if not hasattr(self.scalers[scaler_key], 'scale_'):
-                normalized_values = self.scalers[scaler_key].fit_transform(score_values)
-            else:
-                normalized_values = self.scalers[scaler_key].transform(score_values)
-            
-            # Convert back to dictionary
-            normalized_scores = {}
-            for i, name in enumerate(score_names):
-                normalized_scores[name] = float(normalized_values[i][0])
-            
-            # Apply outlier clipping if configured
-            if method == 'zscore' and normalization_config.get('zscore', {}).get('clip_outliers', False):
-                threshold = normalization_config.get('zscore', {}).get('outlier_threshold', 3.0)
-                for name in normalized_scores:
-                    normalized_scores[name] = np.clip(normalized_scores[name], -threshold, threshold)
-            
-            logger.debug(f"Applied {method} normalization to {domain} scores")
-            return normalized_scores
-            
-        except Exception as e:
-            logger.error(f"Error during normalization: {e}")
-            return scores
     
     def log_contribution(self, domain: str, variable_contributions: List[Tuple[str, float, Any]], 
                         final_score: float, jurisdiction_id: Optional[str] = None) -> None:
@@ -262,8 +272,8 @@ class RiskConfigManager:
         else:  # Default to INFO
             logger.info(contribution_msg)
         
-        # Store for potential analysis
-        self.contribution_logs.append(log_entry)
+        with self._lock:
+            self.contribution_logs.append(log_entry)
     
     def get_contribution_history(self, domain: Optional[str] = None, 
                                jurisdiction_id: Optional[str] = None) -> List[Dict]:
@@ -277,7 +287,8 @@ class RiskConfigManager:
         Returns:
             List of contribution log entries
         """
-        filtered_logs = self.contribution_logs
+        with self._lock:
+            filtered_logs = list(self.contribution_logs)
         
         if domain:
             filtered_logs = [log for log in filtered_logs if log['domain'] == domain]
@@ -320,7 +331,7 @@ class RiskConfigManager:
             'normalization_method': self.config.get('normalization', {}).get('method', 'none'),
             'contribution_logging_enabled': self.config.get('contribution_logging', {}).get('enabled', False),
             'jurisdiction_overrides_count': len(self.config.get('jurisdiction_overrides', {})),
-            'total_contribution_logs': len(self.contribution_logs)
+            'total_contribution_logs': len(self.contribution_logs)  # approximate; not locked for stats
         }
 
 # Global configuration manager instance

@@ -8,7 +8,9 @@ This file serves as a single source of truth for metadata field definitions.
 EXCLUDED_RISK_FIELDS = [
     'tribal_status',
     'tribal_counties',
-    'tribal_primary_county'
+    'tribal_primary_county',
+    'tribal_trust_land_fraction',
+    'tribal_has_trust_land',
 ]
 
 def is_metadata_field(field_name):

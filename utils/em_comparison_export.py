@@ -3,7 +3,7 @@ import os
 import json
 import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -35,11 +35,54 @@ DOMAINS = [
     ("active_shooter_risk", "Active Shooter"),
     ("air_quality_risk", "Air Quality"),
     ("extreme_heat_risk", "Extreme Heat"),
+    ("dam_failure_risk", "Dam Failure"),
+    ("vector_borne_disease_risk", "Vector-Borne Disease"),
     ("utilities_risk", "Utilities"),
 ]
 
-SCORES_CACHE_PATH = os.path.join(tempfile.gettempdir(), "cara_em_comparison_scores.json")
+SCORES_CACHE_KEY = "em_comparison_scores"
 SCORES_MAX_AGE = 86400
+
+
+def _get_cached_scores_from_db():
+    try:
+        from core import db
+        from models import DataSourceCache
+        from sqlalchemy import desc
+        entry = db.session.query(DataSourceCache).filter(
+            DataSourceCache.source_type == SCORES_CACHE_KEY,
+            DataSourceCache.is_valid == True
+        ).order_by(desc(DataSourceCache.fetched_at)).first()
+        if entry:
+            age = (datetime.utcnow() - entry.fetched_at).total_seconds()
+            if age < SCORES_MAX_AGE:
+                return entry.data
+    except Exception as e:
+        logger.warning(f"Error reading EM scores from DB cache: {e}")
+    return None
+
+
+def _save_scores_to_db(result):
+    try:
+        from core import db
+        from models import DataSourceCache
+        db.session.query(DataSourceCache).filter(
+            DataSourceCache.source_type == SCORES_CACHE_KEY
+        ).delete()
+        entry = DataSourceCache(
+            source_type=SCORES_CACHE_KEY,
+            data=result,
+            fetched_at=datetime.utcnow(),
+            expires_at=datetime.utcnow() + timedelta(seconds=SCORES_MAX_AGE),
+            is_valid=True,
+            api_source="cara_internal"
+        )
+        db.session.add(entry)
+        db.session.commit()
+        logger.info(f"Saved EM comparison scores to DB cache ({result.get('count', 0)} jurisdictions)")
+    except Exception as e:
+        logger.error(f"Error saving EM scores to DB cache: {e}")
+        db.session.rollback()
 
 
 def precompute_comparison_scores():
@@ -77,21 +120,13 @@ def precompute_comparison_scores():
         "rows": rows,
     }
 
-    with open(SCORES_CACHE_PATH, "w") as f:
-        json.dump(result, f)
-
-    logger.info(f"Pre-computed {len(rows)} jurisdiction scores to {SCORES_CACHE_PATH}")
+    _save_scores_to_db(result)
+    logger.info(f"Pre-computed {len(rows)} jurisdiction scores")
     return result
 
 
 def load_precomputed_scores():
-    if not os.path.exists(SCORES_CACHE_PATH):
-        return None
-    age = time.time() - os.path.getmtime(SCORES_CACHE_PATH)
-    if age > SCORES_MAX_AGE:
-        return None
-    with open(SCORES_CACHE_PATH) as f:
-        return json.load(f)
+    return _get_cached_scores_from_db()
 
 
 def generate_em_comparison_export():
@@ -130,8 +165,8 @@ def generate_em_comparison_export():
 
     ws.merge_cells("A4:Z4")
     ws["A4"].value = (
-        "PH PHRAT weights: Natural Hazards 33%, Health 20%, Active Shooter 20%, Air Quality 14%, Extreme Heat 13%. "
-        "EM PHRAT weights: Natural Hazards 38%, Active Shooter 15%, Extreme Heat 15%, Health 12%, Utilities 10%, Air Quality 10%."
+        "PH PHRAT weights: Natural Hazards 28%, Active Shooter 18%, Health 17%, Air Quality 12%, Extreme Heat 11%, Dam Failure 7%, Vector-Borne Disease 7%. "
+        "EM PHRAT weights: Natural Hazards 32%, Active Shooter 13%, Extreme Heat 13%, Health 10%, Utilities 10%, Air Quality 8%, Dam Failure 8%, Vector-Borne Disease 6%."
     )
     ws["A4"].font = Font(name="Calibri", size=9, italic=True, color="666666")
     ws["A4"].alignment = Alignment(wrap_text=True)
@@ -205,10 +240,12 @@ def generate_em_comparison_export():
         ("Positive Difference", "EM score is HIGHER than PH — infrastructure-focused assessment sees greater risk"),
         ("Negative Difference", "EM score is LOWER than PH — health-focused assessment sees greater risk"),
         ("", ""),
-        ("PH Domain Weights", "Natural Hazards 33%, Health 20%, Active Shooter 20%, Air Quality 14%, Extreme Heat 13%"),
-        ("EM Domain Weights", "Natural Hazards 38%, Active Shooter 15%, Extreme Heat 15%, Health 12%, Utilities 10%, Air Quality 10%"),
+        ("PH Domain Weights", "Natural Hazards 28%, Active Shooter 18%, Health 17%, Air Quality 12%, Extreme Heat 11%, Dam Failure 7%, Vector-Borne Disease 7%"),
+        ("EM Domain Weights", "Natural Hazards 32%, Active Shooter 13%, Extreme Heat 13%, Health 10%, Utilities 10%, Air Quality 8%, Dam Failure 8%, Vector-Borne Disease 6%"),
         ("", ""),
         ("Utilities Domain", "Supplementary in PH (not in PHRAT score); Primary in EM (10% weight)"),
+        ("Dam Failure Domain", "Uses NID data, WI DNR dam inventory, and FEMA NRI flood data for county-level dam failure risk"),
+        ("Vector-Borne Disease Domain", "Lyme disease, West Nile Virus, Anaplasmosis using WI DHS surveillance data and climate-adjusted models"),
         ("Data Sources", "FEMA NRI, OpenFEMA APIs, NOAA NCEI Storm Events, WI DHS, EPA AirNow, Census/ACS"),
     ]
     for row_idx, (label, value) in enumerate(notes, 1):

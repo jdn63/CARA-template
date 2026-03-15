@@ -580,9 +580,8 @@ def get_current_weather_data(county_name: str) -> Dict:
     Returns:
         Dictionary containing current weather data
     """
-    # This function is called by temporal_risk.py
-    # Create a dummy jurisdiction ID to reuse existing functionality
-    return get_current_weather_conditions("dummy_jurisdiction", county_name)
+    # Delegates to get_current_weather_conditions using county name for lookup
+    return get_current_weather_conditions("_county_lookup", county_name)
 
 def clear_weather_cache() -> int:
     """

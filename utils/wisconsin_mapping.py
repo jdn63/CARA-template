@@ -1,16 +1,3 @@
-# =============================================================================
-# WISCONSIN-SPECIFIC MODULE
-# =============================================================================
-# This module maps Wisconsin city names to their respective counties, used for
-# attributing city-based incident data to the correct county jurisdiction.
-#
-# FOR OTHER JURISDICTIONS: Replace the city-to-county mapping with your own
-# jurisdiction mapping. If your data already uses jurisdiction-level identifiers,
-# this module may not be needed.
-#
-# See the CARA Adaptation Workshop Guide (docs/) for step-by-step instructions.
-# =============================================================================
-
 """
 Wisconsin City to County Mapping
 

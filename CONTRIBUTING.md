@@ -104,24 +104,27 @@ This is critical for a public health risk assessment tool:
 
 ```
 cara/
-├── core.py                  # Application factory
-├── main.py                  # Entry point
-├── models.py                # SQLAlchemy database models
-├── routes/                  # Flask blueprints
-│   ├── api.py               # REST API endpoints
-│   ├── dashboard.py         # Risk dashboard views
-│   ├── herc.py              # HERC region views
-│   ├── gis_export.py        # GIS data export
-│   └── public.py            # Public pages
-├── utils/                   # Business logic and data processing
-│   ├── data_processor.py    # Core risk calculations
-│   ├── security_manager.py  # API key and security management
-│   └── ...                  # Domain-specific modules
-├── templates/               # Jinja2 templates
-├── static/                  # CSS, JS, images
-├── data/                    # Local data files (census, climate, SVI)
-├── config/                  # YAML configuration files
-└── tests/                   # Test suite
+    core.py                     Application factory
+    main.py                     Entry point
+    models.py                   SQLAlchemy database models
+
+    routes/                     Flask blueprints
+        api.py                  REST API endpoints
+        dashboard.py            Risk dashboard views
+        herc.py                 HERC region views
+        gis_export.py           GIS data export
+        public.py               Public pages
+
+    utils/                      Business logic and data processing
+        data_processor.py       Core risk calculations
+        security_manager.py     API key and security management
+        ...                     Domain-specific modules
+
+    templates/                  Jinja2 templates
+    static/                     CSS, JS, images
+    data/                       Local data files (census, climate, SVI)
+    config/                     YAML configuration files
+    tests/                      Test suite
 ```
 
 ## Areas Where We Especially Welcome Help

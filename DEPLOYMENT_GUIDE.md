@@ -9,6 +9,8 @@ Ensure these environment variables are configured in your hosting environment:
 DATABASE_URL=postgresql://username:password@host:port/database
 AIRNOW_API_KEY=your_airnow_api_key
 SESSION_SECRET=your_secure_session_secret
+FBI_CRIME_DATA_API_KEY=your_fbi_api_key (optional)
+OPENAI_API_KEY=your_openai_key (optional, for AI feedback)
 ```
 
 ### Database Setup
@@ -44,7 +46,7 @@ The application will automatically:
 ### 3. Start Application
 ```bash
 # Production deployment
-gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 main:app
+gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app
 
 # Development
 python main.py
@@ -73,14 +75,15 @@ Admin features are available at:
 
 ### Test Data Integration
 - [ ] Weather alerts populate
-- [ ] Census data loads from local files
+- [ ] Census data refreshes
 - [ ] Scheduler runs automatically
 - [ ] Feedback system captures submissions
 
 ### Test Regional Features
-- [ ] Regional dashboards load
-- [ ] Regional aggregation calculations work
-- [ ] HVA exports generate correctly
+- [ ] HERC region dashboards
+- [ ] WEM region integration
+- [ ] Kaiser Permanente HVA exports
+- [ ] Regional aggregation calculations
 
 ## Monitoring and Maintenance
 

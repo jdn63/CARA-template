@@ -46,7 +46,7 @@ class Feedback(Base):
     additional_comments = Column(Text, nullable=True)
     
     # Metadata
-    submitted_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    submitted_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
     
     def __repr__(self):
         return f'<Feedback {self.id} from {self.name or "Anonymous"} at {self.submitted_at}>'
@@ -123,9 +123,9 @@ class HERCRiskCache(Base):
     herc_id = Column(String(10), primary_key=True)  # e.g., "1", "2", etc.
     name = Column(String(100), nullable=False)  # e.g., "HERC Region 1 - Western"
     risk_data = Column(JSON, nullable=False)  # Full risk data structure
-    calculated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    is_valid = Column(Boolean, nullable=False, default=True)
-    calculation_duration_seconds = Column(Float, nullable=True)  # Track performance
+    calculated_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    is_valid = Column(Boolean, nullable=False, default=True, index=True)
+    calculation_duration_seconds = Column(Float, nullable=True)
     jurisdiction_count = Column(Integer, nullable=True)
     error_message = Column(Text, nullable=True)
     
@@ -171,7 +171,7 @@ class ExportJob(Base):
     __tablename__ = 'export_jobs'
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    status = Column(String(20), nullable=False, default='queued')  # queued, running, completed, failed, canceled
+    status = Column(String(20), nullable=False, default='queued', index=True)  # queued, running, completed, failed, canceled
     export_type = Column(String(50), nullable=False, default='all_jurisdictions')  # all_jurisdictions, single_jurisdiction
     
     # Progress tracking
@@ -349,18 +349,18 @@ class DataQualityEvent(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     
-    event_type = Column(String(50), nullable=False)
-    source_type = Column(String(50), nullable=False)
+    event_type = Column(String(50), nullable=False, index=True)
+    source_type = Column(String(50), nullable=False, index=True)
     jurisdiction_id = Column(String(20), nullable=True)
     county_name = Column(String(100), nullable=True)
     
-    severity = Column(String(20), nullable=False, default='warning')
+    severity = Column(String(20), nullable=False, default='warning', index=True)
     message = Column(Text, nullable=False)
     details = Column(JSON, nullable=True)
     
-    occurred_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    occurred_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
     resolved_at = Column(DateTime, nullable=True)
-    is_resolved = Column(Boolean, nullable=False, default=False)
+    is_resolved = Column(Boolean, nullable=False, default=False, index=True)
     
     def __repr__(self):
         return f'<DataQualityEvent {self.event_type} - {self.source_type}>'

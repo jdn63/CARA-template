@@ -10,7 +10,6 @@ from utils.svi_data import get_svi_data
 logger = logging.getLogger(__name__)
 
 _baseline_data_cache = None
-_real_data_cache = {}
 
 TRIBAL_COUNTY_MAPPING = {
     'HoChunk': 'Jackson',
@@ -60,6 +59,15 @@ def load_baseline_data() -> Dict[str, Any]:
 
     _baseline_data_cache = {}
     return _baseline_data_cache
+
+
+def _get_real_county_data(county_name: str) -> Optional[Dict[str, Any]]:
+    try:
+        from utils.vbd_data_fetcher import get_county_real_data
+        return get_county_real_data(county_name)
+    except Exception as e:
+        logger.debug(f"Could not load real VBD data for {county_name}: {e}")
+        return None
 
 
 def _get_tier_score(tier: str, baseline: Dict[str, Any]) -> float:
@@ -160,13 +168,41 @@ def calculate_vector_borne_disease_risk(county_name: str, discipline: str = 'pub
             'outdoor_workforce_pct': 10
         }
 
+    real_data = _get_real_county_data(county_name)
+    using_real_data = real_data is not None
+
     svi = get_all_svi_themes(county_name)
     census = get_census_demographics(county_name)
     seasonal_factor = _get_seasonal_factor()
     climate_mult = _get_climate_multiplier(baseline)
 
-    lyme_score = _get_tier_score(county_data['lyme_tier'], baseline)
-    wnv_score = _get_tier_score(county_data['wnv_tier'], baseline)
+    if using_real_data:
+        from utils.vbd_data_fetcher import rate_to_score, classify_lyme_rate, classify_wnv_rate
+
+        lyme_rate = real_data.get('lyme_avg_annual_rate') or 0
+        wnv_rate = real_data.get('wnv_avg_annual_rate') or 0
+        wnv_total_5yr = real_data.get('wnv_total_cases_5yr') or 0
+        lyme_cases = real_data.get('lyme_avg_annual_cases') or 0
+        wnv_cases_5yr = real_data.get('wnv_total_cases_5yr') or 0
+
+        lyme_score = rate_to_score(lyme_rate, 'lyme')
+        wnv_score = rate_to_score(wnv_rate, 'wnv')
+
+        lyme_tier = classify_lyme_rate(lyme_rate)
+        wnv_tier = classify_wnv_rate(wnv_rate, wnv_total_5yr)
+
+        logger.info(f"VBD real data for {county_name}: Lyme rate={lyme_rate}/100k (score={lyme_score:.3f}), "
+                    f"WNV rate={wnv_rate}/100k (score={wnv_score:.3f})")
+    else:
+        lyme_score = _get_tier_score(county_data['lyme_tier'], baseline)
+        wnv_score = _get_tier_score(county_data['wnv_tier'], baseline)
+        lyme_tier = county_data['lyme_tier']
+        wnv_tier = county_data['wnv_tier']
+        lyme_rate = None
+        wnv_rate = None
+        lyme_cases = None
+        wnv_cases_5yr = None
+
     forest_cover_factor = min(1.0, county_data['forest_cover_pct'] / 100.0)
     deer_density_score = _get_deer_density_score(county_data['deer_density'], baseline)
     outdoor_workforce_factor = min(1.0, county_data['outdoor_workforce_pct'] / 25.0)
@@ -248,8 +284,8 @@ def calculate_vector_borne_disease_risk(county_name: str, discipline: str = 'pub
     season_label = _get_season_label()
 
     metrics = {
-        'lyme_disease_tier': county_data['lyme_tier'],
-        'west_nile_virus_tier': county_data['wnv_tier'],
+        'lyme_disease_tier': lyme_tier,
+        'west_nile_virus_tier': wnv_tier,
         'forest_cover_pct': county_data['forest_cover_pct'],
         'deer_density': county_data['deer_density'],
         'outdoor_workforce_pct': county_data['outdoor_workforce_pct'],
@@ -257,13 +293,30 @@ def calculate_vector_borne_disease_risk(county_name: str, discipline: str = 'pub
         'seasonal_factor': round(seasonal_factor, 2),
         'climate_trend_impact': f"+{int((climate_mult - 1.0) * 100)}%",
         'elderly_vulnerability_pct': round(census['elderly_pct'], 1),
-        'diseases_assessed': ['Lyme Disease', 'West Nile Virus', 'Anaplasmosis', 'Ehrlichiosis']
+        'diseases_assessed': ['Lyme Disease', 'West Nile Virus', 'Anaplasmosis', 'Ehrlichiosis'],
+        'using_real_data': using_real_data,
     }
 
+    if using_real_data:
+        metrics['lyme_incidence_rate'] = lyme_rate
+        metrics['lyme_avg_annual_cases'] = lyme_cases
+        metrics['wnv_incidence_rate'] = wnv_rate
+        metrics['wnv_total_cases_5yr'] = wnv_cases_5yr
+        data_years = real_data.get('lyme_data_years', [])
+        if data_years:
+            metrics['data_period'] = f"{min(data_years)}-{max(data_years)}"
+        else:
+            try:
+                from utils.vbd_data_fetcher import load_real_vbd_data
+                meta = load_real_vbd_data().get('metadata', {})
+                metrics['data_period'] = meta.get('data_years', '2019-2024')
+            except Exception:
+                metrics['data_period'] = '2019-2024'
+
     data_sources = [
-        'Wisconsin DHS Tick-Borne Disease Surveillance Reports',
-        'CDC ArboNET West Nile Virus Surveillance',
-        'USDA Forest Service NLCD Land Cover Data',
+        'WI DHS EPHT Lyme Disease Surveillance (county-level incidence rates)' if using_real_data else 'Wisconsin DHS Tick-Borne Disease Surveillance Reports',
+        'WI DHS Vectorborne Disease Program (WNV county case data)' if using_real_data else 'CDC ArboNET West Nile Virus Surveillance',
+        'USDA Forest Service NLCD 2021 Land Cover Data',
         'Wisconsin DNR Deer Population Estimates',
         'CDC Social Vulnerability Index (SVI)',
         'U.S. Census Bureau ACS Demographics',

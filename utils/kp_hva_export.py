@@ -208,16 +208,20 @@ def _build_kp_hazard_data(risk_data: dict, county_name: str) -> Dict[str, Dict[s
     ts_storm = storm_raw.get('thunderstorm', {})
     ts_risk = risk_data.get('thunderstorm_risk', 0.0)
 
-    dam_risk = flood_risk * 0.6
-    dam_decl = openfema_raw.get('disaster_declarations', {})
-    dam_flood_decl = 0
-    if dam_decl:
-        dam_flood_decl = dam_decl.get('by_incident_type', {}).get('Flood', 0)
+    dam_failure_risk = risk_data.get('dam_failure_risk', 0.0)
+    if dam_failure_risk > 0:
+        dam_prob = _score_to_kp_scale(dam_failure_risk)
+        dam_human = _score_to_kp_scale(dam_failure_risk * 1.2)
+        dam_property = _score_to_kp_scale(dam_failure_risk * 1.1)
+    else:
+        dam_prob = _score_to_kp_scale(flood_risk * 0.6)
+        dam_human = min(3, flood_human + 1) if flood_human > 0 else 1
+        dam_property = min(3, flood_property + 1) if flood_property > 0 else 1
 
     hazard_data['Dam Failure'] = {
-        'probability': _score_to_kp_scale(dam_risk),
-        'human_impact': min(3, flood_human + 1) if flood_human > 0 else 1,
-        'property_impact': min(3, flood_property + 1) if flood_property > 0 else 1,
+        'probability': dam_prob,
+        'human_impact': dam_human,
+        'property_impact': dam_property,
     }
 
     active_shooter_risk = risk_data.get('active_shooter_risk', 0.0)
@@ -235,9 +239,12 @@ def _build_kp_hazard_data(risk_data: dict, county_name: str) -> Dict[str, Dict[s
     }
 
     health_risk = risk_data.get('health_risk', 0.0)
+    vector_borne_risk = risk_data.get('vector_borne_disease_risk', 0.0)
+    combined_disease_risk = max(health_risk, vector_borne_risk)
+
     hazard_data['Epidemic'] = {
-        'probability': _score_to_kp_scale(health_risk * 0.7),
-        'human_impact': _score_to_kp_scale(health_risk),
+        'probability': _score_to_kp_scale(max(health_risk * 0.7, vector_borne_risk * 0.8)),
+        'human_impact': _score_to_kp_scale(combined_disease_risk),
         'property_impact': 0,
     }
     hazard_data['Pandemic'] = {
@@ -246,8 +253,8 @@ def _build_kp_hazard_data(risk_data: dict, county_name: str) -> Dict[str, Dict[s
         'property_impact': 1,
     }
     hazard_data['Infectious Disease Outbreak'] = {
-        'probability': _score_to_kp_scale(health_risk * 0.8),
-        'human_impact': _score_to_kp_scale(health_risk),
+        'probability': _score_to_kp_scale(max(health_risk * 0.8, vector_borne_risk)),
+        'human_impact': _score_to_kp_scale(combined_disease_risk),
         'property_impact': 0,
     }
     hazard_data['Seasonal Influenza'] = {
@@ -370,8 +377,8 @@ def _avg_health_impact_factor(counties: list, hazard_type: str) -> float:
     for county in counties:
         try:
             factors.append(get_health_impact_factor(county, hazard_type))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Could not get health impact factor for {county}/{hazard_type}: {e}")
     return sum(factors) / len(factors) if factors else 1.0
 
 
@@ -442,11 +449,20 @@ def _build_kp_hazard_data_herc(risk_data: dict, counties: list) -> Dict[str, Dic
         'property_impact': winter_property,
     }
 
-    dam_risk = flood_risk * 0.6
+    dam_failure_risk = risk_data.get('dam_failure_risk', 0.0)
+    if dam_failure_risk > 0:
+        dam_prob = _score_to_kp_scale(dam_failure_risk)
+        dam_human = _score_to_kp_scale(dam_failure_risk * 1.2)
+        dam_property = _score_to_kp_scale(dam_failure_risk * 1.1)
+    else:
+        dam_prob = _score_to_kp_scale(flood_risk * 0.6)
+        dam_human = min(3, flood_human + 1) if flood_human > 0 else 1
+        dam_property = min(3, flood_property + 1) if flood_property > 0 else 1
+
     hazard_data['Dam Failure'] = {
-        'probability': _score_to_kp_scale(dam_risk),
-        'human_impact': min(3, flood_human + 1) if flood_human > 0 else 1,
-        'property_impact': min(3, flood_property + 1) if flood_property > 0 else 1,
+        'probability': dam_prob,
+        'human_impact': dam_human,
+        'property_impact': dam_property,
     }
 
     active_shooter_risk = risk_data.get('active_shooter_risk', 0.0)
@@ -464,9 +480,12 @@ def _build_kp_hazard_data_herc(risk_data: dict, counties: list) -> Dict[str, Dic
     }
 
     health_risk = risk_data.get('health_risk', 0.0)
+    vector_borne_risk = risk_data.get('vector_borne_disease_risk', 0.0)
+    combined_disease_risk = max(health_risk, vector_borne_risk)
+
     hazard_data['Epidemic'] = {
-        'probability': _score_to_kp_scale(health_risk * 0.7),
-        'human_impact': _score_to_kp_scale(health_risk),
+        'probability': _score_to_kp_scale(max(health_risk * 0.7, vector_borne_risk * 0.8)),
+        'human_impact': _score_to_kp_scale(combined_disease_risk),
         'property_impact': 0,
     }
     hazard_data['Pandemic'] = {
@@ -475,8 +494,8 @@ def _build_kp_hazard_data_herc(risk_data: dict, counties: list) -> Dict[str, Dic
         'property_impact': 1,
     }
     hazard_data['Infectious Disease Outbreak'] = {
-        'probability': _score_to_kp_scale(health_risk * 0.8),
-        'human_impact': _score_to_kp_scale(health_risk),
+        'probability': _score_to_kp_scale(max(health_risk * 0.8, vector_borne_risk)),
+        'human_impact': _score_to_kp_scale(combined_disease_risk),
         'property_impact': 0,
     }
     hazard_data['Seasonal Influenza'] = {

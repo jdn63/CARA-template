@@ -9,7 +9,7 @@ import yaml
 from scipy import stats
 from typing import Dict, List, Tuple, Any, Optional
 from werkzeug.datastructures import FileStorage
-# Census API replaced with local data files for strategic planning
+from census import Census
 from datetime import datetime, timedelta
 
 _county_baselines = None
@@ -73,87 +73,9 @@ from utils.jurisdiction_mapping_code import jurisdiction_mapping
 logger = logging.getLogger(__name__)
 # Initializing CorrectionalFacilitiesConnector inline to avoid network errors
 
-# Dictionary to map jurisdiction IDs to county names
-JURISDICTION_TO_COUNTY = {
-    # Tribal jurisdictions mapped to their primary county
-    'T01': 'Ashland',       # Bad River Band
-    'T02': 'Bayfield',      # Red Cliff Band
-    'T03': 'Jackson',       # Ho-Chunk Nation
-    'T04': 'Brown',         # Oneida Nation
-    'T05': 'Menominee',     # Menominee Tribe
-    'T06': 'Sawyer',        # Lac Courte Oreilles
-    'T07': 'Vilas',         # Lac du Flambeau
-    'T08': 'Forest',        # Potawatomi
-    'T10': 'Burnett',       # St. Croix Chippewa
-    'T11': 'Forest',        # Sokaogon Chippewa (Mole Lake)
-    
-    # County IDs - first two digits are the county FIPS code
-    '01': 'Adams',
-    '02': 'Ashland',
-    '03': 'Barron',
-    '04': 'Bayfield',
-    '05': 'Brown',
-    '06': 'Buffalo',
-    '07': 'Burnett',
-    '08': 'Calumet',
-    '09': 'Chippewa',
-    '10': 'Clark',
-    '11': 'Columbia',
-    '12': 'Crawford',
-    '13': 'Dane',
-    '14': 'Dodge',
-    '15': 'Door',
-    '16': 'Douglas',
-    '17': 'Dunn',
-    '18': 'Eau Claire',
-    '19': 'Florence',
-    '20': 'Fond du Lac',
-    '21': 'Forest',
-    '22': 'Grant',
-    '23': 'Green',
-    '24': 'Green Lake',
-    '25': 'Iowa',
-    '26': 'Iron',
-    '27': 'Jackson',
-    '28': 'Jefferson',
-    '29': 'Juneau',
-    '30': 'Kenosha',
-    '31': 'Kewaunee',
-    '32': 'La Crosse',
-    '33': 'Lafayette',
-    '34': 'Langlade',
-    '35': 'Lincoln',
-    '36': 'Manitowoc',
-    '37': 'Marathon',
-    '38': 'Marinette',
-    '39': 'Marquette',
-    '40': 'Milwaukee',
-    '46': 'Pepin',
-    '47': 'Pierce',
-    '48': 'Polk',
-    '49': 'Portage',
-    '50': 'Price',
-    '56': 'Sawyer',
-    '57': 'Shawano',
-    '58': 'Sheboygan',
-    '59': 'St. Croix',
-    '60': 'Taylor',
-    '61': 'Trempealeau',
-    '62': 'Vernon',
-    '63': 'Vilas',
-    '64': 'Walworth',
-    '65': 'Washburn',
-    '66': 'Washington',
-    '67': 'Waukesha',
-    '68': 'Waupaca',
-    '69': 'Waushara',
-    '70': 'Winnebago',
-    '71': 'Wood'
-}
-
-# NOTE: This JURISDICTION_TO_COUNTY dict is deprecated and should not be used.
-# Use jurisdiction_mapping from jurisdiction_mapping_code.py instead, which has the authoritative
-# mapping for all jurisdictions including city health departments.
+# NOTE: The deprecated JURISDICTION_TO_COUNTY dict was removed. It had incorrect IDs
+# (e.g., '40' mapped to Milwaukee instead of Lincoln, tribal IDs were scrambled).
+# The authoritative mapping is jurisdiction_mapping from jurisdiction_mapping_code.py.
 
 def get_county_id(county_name: str) -> str:
     """
@@ -279,12 +201,7 @@ def get_county_for_jurisdiction(jurisdiction_id: str) -> str:
     # Use authoritative jurisdiction_mapping from jurisdiction_mapping_code.py
     county = jurisdiction_mapping.get(jurisdiction_id)
     if not county:
-        # Fallback to deprecated JURISDICTION_TO_COUNTY for any missing entries
-        county = JURISDICTION_TO_COUNTY.get(jurisdiction_id)
-        if county:
-            logger.debug(f"Used fallback JURISDICTION_TO_COUNTY for jurisdiction ID: {jurisdiction_id}")
-        else:
-            logger.warning(f"No county mapping found for jurisdiction ID: {jurisdiction_id}")
+        logger.warning(f"No county mapping found for jurisdiction ID: {jurisdiction_id}")
     
     return county
 
@@ -1213,9 +1130,11 @@ def process_risk_data(jurisdiction_id: str, additional_data: Optional[FileStorag
     numeric_hazards = {}
     for key, value in natural_hazards.items():
         if isinstance(value, (float, int)) and key not in [
-            'tribal_status', 
-            'tribal_counties', 
-            'tribal_primary_county'
+            'tribal_status',
+            'tribal_counties',
+            'tribal_primary_county',
+            'tribal_trust_land_fraction',
+            'tribal_has_trust_land',
         ]:
             numeric_hazards[key] = value
     
@@ -1285,6 +1204,18 @@ def process_risk_data(jurisdiction_id: str, additional_data: Optional[FileStorag
     
     logger.info(f"Adjusted air quality risk with SVI factors: {air_quality_risk / air_quality_svi_multiplier:.2f} → {air_quality_risk:.2f}")
     
+    from utils.dam_failure_risk import calculate_dam_failure_risk
+    dam_failure_data = calculate_dam_failure_risk(county_name, discipline=discipline)
+    dam_failure_risk_base = dam_failure_data.get('overall', 0.3)
+    dam_failure_svi_multiplier = 1.0 + (svi_themes.get('housing_transportation', 0.5) * 0.2)
+    dam_failure_risk = min(1.0, dam_failure_risk_base * dam_failure_svi_multiplier)
+    
+    from utils.vector_borne_disease_risk import calculate_vector_borne_disease_risk
+    vbd_data = calculate_vector_borne_disease_risk(county_name, discipline=discipline)
+    vbd_risk_base = vbd_data.get('overall', 0.3)
+    vbd_svi_multiplier = 1.0 + (svi_themes.get('socioeconomic', 0.5) * 0.15)
+    vbd_risk = min(1.0, vbd_risk_base * vbd_svi_multiplier)
+    
     # Calculate final weighted score using Drexel PHRAT formula
     # Total Risk Score = (w₁ × Risk₁^p + w₂ × Risk₂^p + ... + wₙ × Riskₙ^p)^(1/p)
     # where p=2 for a quadratic mean that appropriately emphasizes higher risks
@@ -1317,7 +1248,18 @@ def process_risk_data(jurisdiction_id: str, additional_data: Optional[FileStorag
         # Legacy fields for backward compatibility
         'air_quality_data': locals().get('air_quality_data', {}),
         'air_quality_aqi': locals().get('air_quality_data', {}).get('aqi'),
-        'air_quality_category': locals().get('air_quality_data', {}).get('category', 'unknown')
+        'air_quality_category': locals().get('air_quality_data', {}).get('category', 'unknown'),
+        'dam_failure_risk': float(dam_failure_risk),
+        'dam_failure_components': dam_failure_data.get('components', {}),
+        'dam_failure_metrics': dam_failure_data.get('metrics', {}),
+        'dam_failure_exposure_factors': dam_failure_data.get('exposure_factors', {}),
+        'dam_failure_vulnerability_breakdown': dam_failure_data.get('vulnerability_breakdown', {}),
+        'dam_failure_data_sources': dam_failure_data.get('data_sources', []),
+        'vector_borne_disease_risk': float(vbd_risk),
+        'vbd_components': vbd_data.get('components', {}),
+        'vbd_metrics': vbd_data.get('metrics', {}),
+        'vbd_disease_breakdown': vbd_data.get('disease_breakdown', {}),
+        'vbd_data_sources': vbd_data.get('data_sources', []),
     }
     
     # Calculate utilities and community resources risks
@@ -1363,12 +1305,14 @@ def process_risk_data(jurisdiction_id: str, additional_data: Optional[FileStorag
     
     if discipline == 'em':
         weights = {
-            'natural_hazards': 0.38,
-            'health_metrics': 0.12,
-            'active_shooter': 0.15,
-            'extreme_heat': 0.15,
-            'air_quality': 0.10,
-            'utilities': 0.10
+            'natural_hazards': 0.32,
+            'health_metrics': 0.10,
+            'active_shooter': 0.13,
+            'extreme_heat': 0.13,
+            'air_quality': 0.08,
+            'utilities': 0.10,
+            'dam_failure': 0.08,
+            'vector_borne_disease': 0.06,
         }
         risk_values = {
             'natural_hazards': float(natural_hazards_score),
@@ -1376,23 +1320,29 @@ def process_risk_data(jurisdiction_id: str, additional_data: Optional[FileStorag
             'active_shooter': float(active_shooter_risk),
             'extreme_heat': float(extreme_heat_risk),
             'air_quality': float(air_quality_risk),
-            'utilities': float(utilities_category_score)
+            'utilities': float(utilities_category_score),
+            'dam_failure': float(dam_failure_risk),
+            'vector_borne_disease': float(vbd_risk),
         }
         logger.info(f"Using Emergency Management PHRAT weights (utilities elevated to primary domain)")
     else:
         weights = {
-            'natural_hazards': 0.33,
-            'health_metrics': 0.20,
-            'active_shooter': 0.20,
-            'extreme_heat': 0.13,
-            'air_quality': 0.14
+            'natural_hazards': 0.28,
+            'health_metrics': 0.17,
+            'active_shooter': 0.18,
+            'extreme_heat': 0.11,
+            'air_quality': 0.12,
+            'dam_failure': 0.07,
+            'vector_borne_disease': 0.07,
         }
         risk_values = {
             'natural_hazards': float(natural_hazards_score),
             'health_metrics': float(health_metrics_score),
             'active_shooter': float(active_shooter_risk),
             'extreme_heat': float(extreme_heat_risk),
-            'air_quality': float(air_quality_risk)
+            'air_quality': float(air_quality_risk),
+            'dam_failure': float(dam_failure_risk),
+            'vector_borne_disease': float(vbd_risk),
         }
     
     p = 2.0
@@ -1492,7 +1442,7 @@ def process_risk_data(jurisdiction_id: str, additional_data: Optional[FileStorag
                 'final_score': round(float(extreme_heat_risk), 4),
                 'weighted_contribution': round(weights['extreme_heat'] * (float(extreme_heat_risk) ** p), 4),
                 'svi_adjustment': f'Weighted avg: 70% base + 30% SVI impact (socioeconomic={round(socioeconomic_svi_factor, 3)} × 0.6)',
-                'data_sources': ['NOAA Climate Normals 1991-2020 (static)', 'NWS heat forecasts (cached)', 'Census ACS elderly/poverty (annual)', 'CDC SVI (annual cache)'],
+                'data_sources': ['NOAA Climate Normals 1991-2020 (static)', 'NWS heat forecasts (cached)', 'Census ACS population 65+/poverty (annual)', 'CDC SVI (annual cache)'],
                 'aggregation': 'EVR framework (exposure × vulnerability × resilience)'
             },
             {
@@ -1504,6 +1454,26 @@ def process_risk_data(jurisdiction_id: str, additional_data: Optional[FileStorag
                 'svi_adjustment': f'Multiplier: housing_transport={round(housing_transport_multiplier, 3)} × socioeconomic={round(socioeconomic_multiplier, 3)} (combined={round(air_quality_svi_multiplier, 3)})',
                 'data_sources': ['EPA AirNow API (daily scheduler cache)', 'Census ACS demographics', 'CDC SVI housing/socioeconomic themes'],
                 'aggregation': 'Strategic composite risk score from AQI + vulnerability factors'
+            },
+            {
+                'name': 'Dam Failure',
+                'weight': weights.get('dam_failure', 0.07),
+                'pre_svi_score': round(float(dam_failure_risk_base), 4),
+                'final_score': round(float(dam_failure_risk), 4),
+                'weighted_contribution': round(weights.get('dam_failure', 0.07) * (float(dam_failure_risk) ** p), 4),
+                'svi_adjustment': f'Multiplier: housing_transport={round(dam_failure_svi_multiplier, 3)}',
+                'data_sources': ['WI DNR Dam Safety Database (weekly cache)', 'USACE NID (fallback)', 'OpenFEMA NFIP Claims (weekly cache)', 'CDC SVI (annual cache)', 'U.S. Census ACS (annual)'],
+                'aggregation': 'EVR framework (dam density × hazard classification × flood zone overlap × est. % population in inundation zones)'
+            },
+            {
+                'name': 'Vector-Borne Disease',
+                'weight': weights.get('vector_borne_disease', 0.07),
+                'pre_svi_score': round(float(vbd_risk_base), 4),
+                'final_score': round(float(vbd_risk), 4),
+                'weighted_contribution': round(weights.get('vector_borne_disease', 0.07) * (float(vbd_risk) ** p), 4),
+                'svi_adjustment': f'Multiplier: socioeconomic={round(vbd_svi_multiplier, 3)}',
+                'data_sources': ['WI DHS EPHT Lyme incidence rates (county-level, 2019-2024)', 'WI DHS Vectorborne Disease Program WNV (county-level, 2019-2024)', 'USDA NLCD 2021 forest cover (static)', 'WI DNR deer density (static)', 'WICCI/NOAA climate projections (static)'],
+                'aggregation': 'EVR framework (incidence rate × land cover × climate × seasonal)'
             }
         ],
         'supplementary_domains': [
@@ -1588,100 +1558,32 @@ def get_historical_risk_data(jurisdiction_id: str, start_year: int = 2020, end_y
     """
     Get historical risk data for timeline visualization and temporal analysis.
     
-    This function provides historical risk data used both for visualization and
-    as input for the temporal risk analysis framework.
+    Returns current risk snapshot as a single data point. Trend analysis is now
+    handled by utils/real_trend_calculator.py using real cached data from NOAA
+    Storm Events, OpenFEMA, climate projections, and Census data rather than
+    synthetic historical generation.
     """
-    # In a real application, this would retrieve historical data from a database
-    # For this prototype, we'll generate synthetic data with reasonable trends
-    
-    # Get the current risk data as a baseline
     current_risk = process_risk_data(jurisdiction_id)
     
-    # Create list to hold historical data points
-    historical_data = []
-    
-    # Generate data points for each quarter from start_year to current
     current_year = datetime.now().year
     current_quarter = (datetime.now().month - 1) // 3 + 1
+    quarter_month = {1: 1, 2: 4, 3: 7, 4: 10}[current_quarter]
+    current_date = f"{current_year}-{quarter_month:02d}-01"
     
-    # Natural trajectory of decreasing risk due to mitigation efforts
-    improvement_factor = 0.95  # 5% improvement year-over-year
-    
-    # Event spikes (major incidents that temporarily increased risk)
-    # Format: (year, quarter, risk_factor, magnitude)
-    risk_events = [
-        (2020, 1, 'health_risk', 0.3),         # COVID-19 initial outbreak
-        (2020, 4, 'natural_hazards_risk', 0.1), # Winter storms
-        (2021, 3, 'cybersecurity_risk', 0.15),  # Major ransomware trend
-        (2022, 2, 'natural_hazards_risk', 0.12), # Flooding events
-        (2023, 3, 'extreme_heat_risk', 0.2),     # Heat wave
-        (2024, 1, 'utilities_risk', 0.18),      # Major power outage during winter
-    ]
-    
-    # Current risk values
-    base_values = {
-        'total_risk': float(current_risk['total_risk_score']),
-        'natural_hazards_risk': float(current_risk['natural_hazards_risk']),
-        'health_risk': float(current_risk['health_risk']),
-        'active_shooter_risk': float(current_risk['active_shooter_risk']),
-        'extreme_heat_risk': float(current_risk['extreme_heat_risk']),
-        'cybersecurity_risk': float(current_risk['cybersecurity_risk']),
-        'utilities_risk': float(current_risk.get('utilities_risk', 0.5))
+    data_point = {
+        'year': current_year,
+        'quarter': current_quarter,
+        'date': current_date,
+        'total_risk_score': round(float(current_risk.get('total_risk_score', 0.5)), 2),
+        'natural_hazards_risk': round(float(current_risk.get('natural_hazards_risk', 0.5)), 2),
+        'health_risk': round(float(current_risk.get('health_risk', 0.5)), 2),
+        'active_shooter_risk': round(float(current_risk.get('active_shooter_risk', 0.5)), 2),
+        'extreme_heat_risk': round(float(current_risk.get('extreme_heat_risk', 0.5)), 2),
+        'cybersecurity_risk': round(float(current_risk.get('cybersecurity_risk', 0.5)), 2),
+        'utilities_risk': round(float(current_risk.get('utilities_risk', 0.5)), 2)
     }
     
-    # Generate quarterly data
-    for year in range(end_year, start_year - 1, -1):
-        for quarter in range(4, 0, -1):
-            # Skip future quarters
-            if year > current_year or (year == current_year and quarter > current_quarter):
-                continue
-            
-            # Calculate how many quarters ago this was
-            quarters_ago = (current_year - year) * 4 + (current_quarter - quarter)
-            
-            # Apply improvement factor (compound)
-            factor = improvement_factor ** (quarters_ago / 4)  # Quarterly compounding
-            
-            # Calculate proper date for the quarter
-            # Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec
-            quarter_month = {1: 1, 2: 4, 3: 7, 4: 10}[quarter]
-            quarter_date = f"{year}-{quarter_month:02d}-01"
-            
-            # Start with adjusted base values
-            quarter_data = {
-                'year': year,
-                'quarter': quarter,
-                'date': quarter_date,
-                'total_risk_score': round(float(base_values['total_risk'] / factor), 2),
-                'natural_hazards_risk': round(float(base_values['natural_hazards_risk'] / factor), 2),
-                'health_risk': round(float(base_values['health_risk'] / factor), 2),
-                'active_shooter_risk': round(float(base_values['active_shooter_risk'] / factor), 2),
-                'extreme_heat_risk': round(float(base_values['extreme_heat_risk'] / factor), 2),
-                'cybersecurity_risk': round(float(base_values['cybersecurity_risk'] / factor), 2),
-                'utilities_risk': round(float(base_values['utilities_risk'] / factor), 2)
-            }
-            
-            # Apply event spikes
-            for event_year, event_quarter, risk_factor, magnitude in risk_events:
-                if year == event_year and quarter == event_quarter:
-                    # Increase the specific risk factor
-                    quarter_data[risk_factor] = min(1.0, float(quarter_data[risk_factor] + magnitude))
-                    
-                    # Adjust total risk proportionally
-                    risk_weight = 0.2  # Approximate weight in total calculation
-                    quarter_data['total_risk_score'] = min(1.0, float(quarter_data['total_risk_score'] + magnitude * risk_weight))
-            
-            # Ensure all values are between 0-1
-            for key in quarter_data:
-                if key != 'date' and isinstance(quarter_data[key], (int, float)):
-                    quarter_data[key] = max(0.0, min(1.0, float(quarter_data[key])))
-            
-            historical_data.append(quarter_data)
-    
-    # Sort by date (oldest first)
-    historical_data.reverse()
-    
-    return historical_data
+    return [data_point]
 
 def get_cybersecurity_risk_data(jurisdiction_id: str) -> dict:
     """
@@ -2068,9 +1970,9 @@ def calculate_winter_storm_risk(county_name: str) -> dict:
         'rural_isolation': 0.0               # Will be calculated below
     }
     
-    # Get elderly population percentage
+    # Get population aged 65+ percentage
     elderly_pct = get_elderly_population_pct(county_name)
-    # Scale factor: 15% elderly = 0.3, 30% = 0.6 (linear scale)
+    # Scale factor: 15% aged 65+ = 0.3, 30% = 0.6 (linear scale)
     elderly_factor = min(0.8, (elderly_pct / 50.0))
     vulnerability_factors['elderly_population'] = elderly_factor
     
@@ -2558,7 +2460,7 @@ def get_heat_advisories_count(county_name: str) -> int:
         return 3
 
 
-# Cache for elderly population data to avoid repeated API calls
+# Cache for population aged 65+ data to avoid repeated API calls
 _elderly_cache = {}
 _elderly_cache_expiry = {}
 
@@ -2567,7 +2469,7 @@ _ELDERLY_CACHE_DURATION = 86400
 
 def get_elderly_population_pct(county_name: str) -> float:
     """
-    Get the percentage of elderly population (65+) in a county from Census API.
+    Get the percentage of population aged 65 and older in a county from Census API.
     
     Args:
         county_name: Name of the Wisconsin county
@@ -2579,7 +2481,7 @@ def get_elderly_population_pct(county_name: str) -> float:
     
     # Check if we have non-expired cached data
     if county_name in _elderly_cache and _elderly_cache_expiry.get(county_name, 0) > datetime.now().timestamp():
-        logger.info(f"Using cached elderly population data for {county_name}")
+        logger.info(f"Using cached population 65+ data for {county_name}")
         return _elderly_cache[county_name]
     
     # Check if this is a tribal jurisdiction and handle differently
@@ -2605,17 +2507,16 @@ def get_elderly_population_pct(county_name: str) -> float:
         
         for tribal_name, mapped_county in tribal_county_mapping.items():
             if tribal_name in county_name:
-                logger.info(f"Using {mapped_county} County as proxy for {county_name} elderly population data")
+                logger.info(f"Using {mapped_county} County as proxy for {county_name} population 65+ data")
                 county_name = mapped_county
                 break
     
     try:
         # Use Census API if available
-        # Census API replaced with local data files for strategic planning
-        # census_api_key = os.environ.get("CENSUS_API_KEY")
+        census_api_key = os.environ.get("CENSUS_API_KEY")
         
         if census_api_key:
-            logger.info(f"Using Census API key to get real elderly population data for {county_name}")
+            logger.info(f"Using Census API key to get real population 65+ data for {county_name}")
             
             # Create Census API client
             c = Census(census_api_key)
@@ -2623,10 +2524,12 @@ def get_elderly_population_pct(county_name: str) -> float:
             # Get county FIPS code using mapping from SVI data module
             from utils.svi_data import WI_COUNTY_FIPS, WI_FIPS
             
-            county_fips = WI_COUNTY_FIPS.get(county_name)
-            if not county_fips:
+            full_fips = WI_COUNTY_FIPS.get(county_name) or WI_COUNTY_FIPS.get(county_name.lower())
+            if not full_fips:
                 logger.warning(f"Unknown county name for Census API: {county_name}")
                 raise ValueError(f"Unknown county name: {county_name}")
+            
+            county_fips = str(full_fips)[-3:]
             
             # Query ACS data for this county's age demographics
             # We need total population and population aged 65+
@@ -2638,16 +2541,16 @@ def get_elderly_population_pct(county_name: str) -> float:
                  'B01001_044E', 'B01001_045E', 'B01001_046E', 'B01001_047E', 'B01001_048E', 'B01001_049E'],
                 WI_FIPS, county_fips)[0]
             
-            # Calculate elderly percentage
+            # Calculate population 65+ percentage
             total_population = data['B01001_001E']
             
-            # Sum male elderly population (65+)
-            male_elderly = sum([data.get(f'B01001_{i}E', 0) for i in range(20, 26)])
+            # Sum male population aged 65+
+            male_elderly = sum([data.get(f'B01001_{i:03d}E', 0) for i in range(20, 26)])
             
-            # Sum female elderly population (65+)
-            female_elderly = sum([data.get(f'B01001_{i}E', 0) for i in range(44, 50)])
+            # Sum female population aged 65+
+            female_elderly = sum([data.get(f'B01001_{i:03d}E', 0) for i in range(44, 50)])
             
-            # Calculate total elderly and percentage
+            # Calculate total population 65+ and percentage
             elderly_population = male_elderly + female_elderly
             
             if total_population > 0:
@@ -2661,11 +2564,11 @@ def get_elderly_population_pct(county_name: str) -> float:
                 return elderly_percentage
     
     except Exception as e:
-        logger.error(f"Error retrieving elderly population data from Census API: {str(e)}")
+        logger.error(f"Error retrieving population 65+ data from Census API: {str(e)}")
         # Fall through to use default data if API fails
     
     # If we couldn't get real data, use pre-calculated data for Wisconsin counties
-    logger.warning(f"Using pre-calculated elderly population data for {county_name} due to API error")
+    logger.warning(f"Using pre-calculated population 65+ data for {county_name} due to API error")
     
     # Default pre-calculated dataset based on Wisconsin demographics (from prior ACS data)
     elderly_percentages = {
@@ -2707,7 +2610,7 @@ def calculate_extreme_heat_risk(county_name: str) -> dict:
     county characteristics used as proxy indicators:
       - Exposure: NOAA Climate Normals (1991-2020) average July max temperature
         by county, EPA urban heat island research, latitude/geography
-      - Vulnerability: Census ACS elderly %, poverty rate, housing age;
+      - Vulnerability: Census ACS population 65+ (%), poverty rate, housing age;
         CDC SVI socioeconomic and housing themes
       - Resilience: County Health Rankings healthcare access metrics,
         Census ACS urbanization level as proxy for cooling center availability
@@ -2726,7 +2629,7 @@ def calculate_extreme_heat_risk(county_name: str) -> dict:
     
     # VULNERABILITY COMPONENT (population and infrastructure susceptibility)
     # Loaded from config/county_baselines.yaml → extreme_heat.vulnerability
-    # Proxy: Census ACS 2022 elderly % and poverty rate; CDC SVI housing theme
+    # Proxy: Census ACS 2022 population 65+ (%) and poverty rate; CDC SVI housing theme
     vulnerability_base = _get_baseline('extreme_heat', 'vulnerability', county_name)
     
     vulnerability_score = vulnerability_base

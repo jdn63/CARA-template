@@ -77,6 +77,18 @@ SOURCE_TYPES = {
         'refresh_cadence': 'weekly',
         'expiry_days': 7,
         'description': 'Historical severe weather events per county from NCEI Storm Events Database'
+    },
+    'nid_dam_inventory': {
+        'name': 'NID Dam Inventory',
+        'refresh_cadence': 'weekly',
+        'expiry_days': 30,
+        'description': 'Dam counts, hazard classifications, and EAP status per county from USACE National Inventory of Dams'
+    },
+    'dhs_vbd_surveillance': {
+        'name': 'DHS EPHT VBD Surveillance',
+        'refresh_cadence': 'weekly',
+        'expiry_days': 7,
+        'description': 'Vector-borne disease surveillance data (Lyme, WNV) from WI DHS EPHT and Vectorborne Disease Program'
     }
 }
 

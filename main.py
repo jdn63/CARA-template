@@ -17,12 +17,11 @@ The application factory pattern provides better:
 - Scalability (easier to add new blueprints and extensions)
 """
 
+import os
+
 from core import create_app
 
-# Create the Flask app using the application factory
-# This needs to be at module level so gunicorn can find it as 'main:app'
 app = create_app()
 
 if __name__ == "__main__":
-    # Run the app with the same configuration as before
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=os.environ.get("FLASK_DEBUG", "0") == "1")

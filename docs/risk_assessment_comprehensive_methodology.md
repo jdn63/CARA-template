@@ -1,219 +1,284 @@
-# Wisconsin Geospatial Health and Emergency Preparedness Risk Assessment Tool
-## Comprehensive Methodology Documentation
+# CARA Comprehensive Risk Assessment Methodology
+## Version 2.6.0
 
 ## 1. Overview
-This document provides a detailed explanation of the risk assessment methodology, data sources, calculations, and limitations of the Wisconsin Geospatial Health and Emergency Preparedness Risk Assessment Tool.
+
+This document provides detailed documentation of the CARA risk assessment methodology, including data sources, calculation formulas, domain weights, and known limitations. CARA serves 95 Wisconsin public health jurisdictions (101 total entries including multi-county secondary mappings), organized into 7 Healthcare Emergency Readiness Coalition (HERC) regions.
 
 ### 1.1 Scope
-The tool covers all Wisconsin counties with detailed risk assessments for 95 unique public health departments (101 total jurisdiction entries including multi-county secondary mappings). Jurisdictions include:
+
+Jurisdictions include:
 - 84 local health departments
 - 11 federally-recognized tribal nations
-- Organized into 7 Healthcare Emergency Readiness Coalition (HERC) regions
 
-## 2. Data Sources and Integration
+### 1.2 PHRAT Formula
 
-### 2.1 Real-Time/Active Data Sources
-1. **US Census Bureau American Community Survey**
-   - Source: Census Bureau ACS 5-Year Estimates API
-   - Data Retrieved: 
-     - Mobile home counts by county (B25024_010E)
-     - Total housing units by county (B25024_001E)
-   - Update Frequency: Annual updates from latest ACS release
-   - Integration Method: Direct API calls with error handling
-   - Data Quality: 
-     - 90% confidence interval
-     - County-level granularity
-     - Fallback to previous year's data if API unavailable
+CARA uses a Public Health Risk Assessment Tool (PHRAT) quadratic mean:
 
-2. **OpenFEMA API**
-   - Source: FEMA's Open Data API
-   - Endpoint: `https://www.fema.gov/api/open/v1/publicAssistanceFundedProjectsDetails`
-   - Data Retrieved: Correctional facility locations, types, and project details
-   - Update Frequency: Real-time API calls
-   - Integration Status: Active
+```
+Total Risk Score = (w1 * R1^2 + w2 * R2^2 + ... + wn * Rn^2) ^ (1/2)
+```
 
-3. **Wisconsin DHS Data**
-   - Source: Wisconsin Department of Health Services
-   - Data Retrieved: 
-     - ILI (Influenza-like Illness) activity
-     - COVID-19 metrics
-     - RSV activity
-     - Vaccination rates
-   - Update Frequency: Weekly updates
-   - Integration Status: Active
+Where p=2 (quadratic mean). This formula emphasizes higher-risk domains more than a simple weighted average, ensuring that a single high-risk domain is not diluted by several low-risk domains.
 
-4. **FEMA National Risk Index (NRI)**
-   - Source: FEMA National Risk Index dataset
-   - Data Retrieved:
-     - Census tract level natural hazards risk scores
-     - Building exposure data
-   - Update Frequency: Quarterly updates
-   - Integration Status: Active
+### 1.3 Dual-Discipline Support
 
-### 2.2 Representative/Placeholder Data (Currently Not Real-Time)
-1. **Cybersecurity Risk Data**
-   - Current Implementation: Representative data based on county characteristics
-   - Future Sources (Planned for Q3 2025): 
-     - HHS Breach Portal
-     - FBI IC3 Report
-     - CISA Known Exploited Vulnerabilities
+CARA supports both Public Health (PH) and Emergency Management (EM) assessment perspectives. Both use the same underlying data sources but apply different vulnerability/resilience sub-weights:
+- PH weights emphasize population health outcomes (elderly vulnerability, healthcare capacity, disease transmission)
+- EM weights emphasize critical infrastructure impacts (power grid, transportation, mutual aid capacity)
 
-2. **Active Shooter Risk Assessment**
-   - Current Implementation: Population-based estimates
-   - Future Integration (Planned for Q4 2025):
-     - Law enforcement incident data
-     - Emergency response patterns
-     - Historical event analysis
+EM assessments include an 8th primary domain (utilities, 10% weight) that is supplementary in PH mode.
 
-3. **Emergency Response Capabilities**
-   - Current Implementation: Regional averages
-   - Future Integration (Planned for Q3 2025):
-     - Real-time emergency services API
-     - Response time tracking
-     - Resource availability monitoring
+## 2. Primary PHRAT Domain Weights
 
-## 3. Risk Calculation Methodology
+### 2.1 Public Health Weights (Default)
 
-### 3.1 Mobile Home Impact on Tornado Risk
-```python
-# Using real Census data
-mobile_home_percentage = census_mobile_homes / total_housing_units
+| Domain | Weight | Key Data Sources |
+|--------|--------|-----------------|
+| Natural Hazards | 28% | NOAA Storm Events, OpenFEMA (declarations, NFIP claims, HMA), FEMA NRI, Census ACS |
+| Active Shooter | 18% | Gun Violence Archive 2023, NCES SSOCS 2019-2020, Census ACS demographics |
+| Health Metrics | 17% | WI DHS respiratory surveillance (web scraper), Census ACS |
+| Air Quality | 12% | EPA AirNow API, Census ACS, CDC SVI |
+| Extreme Heat | 11% | NOAA climate normals, NWS heat forecasts, Census ACS (65+, poverty), CDC SVI |
+| Dam Failure | 7% | WI DNR Dam Safety DB, USACE NID (fallback), OpenFEMA NFIP, CDC SVI |
+| Vector-Borne Disease | 7% | WI DHS EPHT Lyme/WNV county CSVs, USDA NLCD, WI DNR deer density |
+
+### 2.2 Emergency Management Weights
+
+| Domain | Weight |
+|--------|--------|
+| Natural Hazards | 32% |
+| Active Shooter | 13% |
+| Extreme Heat | 13% |
+| Health Metrics | 10% |
+| Utilities | 10% |
+| Air Quality | 8% |
+| Dam Failure | 8% |
+| Vector-Borne Disease | 6% |
+
+### 2.3 Weight Rationale
+
+Weights reflect relative frequency, severity, and breadth of public health impact for each hazard type in Wisconsin, informed by:
+- FEMA National Risk Index annualized expected loss data for Wisconsin
+- CDC PHEP (Public Health Emergency Preparedness) capability priorities
+- Wisconsin DHS Hazard Vulnerability Assessment guidance
+- Historical disaster declaration frequency (FEMA, 2000-2024)
+
+Weights are configurable in `config/risk_weights.yaml`.
+
+## 3. Data Sources and Integration
+
+### 3.1 Scheduler-Cached Data Sources
+
+All external data is pre-fetched by APScheduler jobs and stored in PostgreSQL cache. No external API calls occur during user assessments.
+
+| Source | Endpoint/Method | Data Retrieved | Refresh |
+|--------|-----------------|----------------|---------|
+| NOAA NCEI Storm Events | Bulk CSV download | County-level storm event counts by type | Quarterly |
+| OpenFEMA Disaster Declarations v2 | REST API (keyless) | WI disaster declarations by county and type | Weekly |
+| OpenFEMA NFIP Claims v2 | REST API (keyless) | Flood insurance claims by county | Weekly |
+| OpenFEMA HMA Projects v4 | REST API (keyless) | Hazard mitigation project data | Weekly |
+| WI DNR Dam Safety Database | ArcGIS FeatureServer (keyless) | Wisconsin dam inventory, hazard classifications | Weekly |
+| USACE NID | ArcGIS FeatureServer (keyless, fallback) | National dam inventory (used if DNR unavailable) | Weekly |
+| CDC/ATSDR SVI 2022 | ArcGIS REST API (keyless) | County-level SVI percentile rankings (all 72 WI counties) | Annual |
+| EPA AirNow | REST API (keyed) | AQI readings at monitoring stations | Daily |
+| NOAA/NWS | REST API (keyless) | Heat forecasts, weather data | Daily |
+| WI DHS Respiratory Surveillance | Web scraper (dhs.wisconsin.gov) | ILI, COVID-19, RSV activity levels | Weekly |
+| WI DHS EPHT (Lyme/WNV) | CSV download (dhs.wisconsin.gov/epht) | County-level Lyme and WNV incidence rates per 100k | Weekly |
+| US Census Bureau ACS | Local CSV files | Demographics, housing, mobile homes, elderly population | Annual (manual update) |
+
+### 3.2 Static/Local Data Sources
+
+| Source | File Path | Used For |
+|--------|-----------|----------|
+| FEMA NRI Census Tracts | `attached_assets/NRI_Table_CensusTracts_Wisconsin_FloodTornadoWinterOnly.csv` | Natural hazard baseline risk scores |
+| Gun Violence Archive 2023 | `attached_assets/GunViolenceArchive 2023 mass shootings data.csv` | Active shooter historical incidents |
+| NCES SSOCS 2019-2020 | `attached_assets/SSOCS 2019_2020 data.zip` | School safety indicators |
+| NOAA Climate Normals 1991-2020 | Static baselines in code | Heat risk baseline calculations |
+| USDA NLCD 2021 | Static data in code | Forest cover for VBD risk |
+| WI DNR Deer Density | Static data in code | Tick habitat proxy for VBD risk |
+
+### 3.3 Supplementary Domains (Proxy-Modeled, Not in PHRAT)
+
+| Domain | Method | Limitation |
+|--------|--------|------------|
+| Cybersecurity | Modeled from county characteristics and SVI socioeconomic percentile | No direct cybersecurity breach data. SVI-based adjustment assumes lower-income communities have fewer IT security resources -- a proxy assumption without direct empirical validation. |
+| Utilities | Composite of 4 sub-models (electrical outage 30%, utilities disruption 30%, supply chain 20%, fuel shortage 20%) | All use statistical models with proxy indicators, not real utility company data. |
+
+## 4. Risk Calculation Details
+
+### 4.1 Natural Hazards (EVR Framework)
+
+Each sub-type (flood, tornado, winter storm, thunderstorm) uses an Exposure-Vulnerability-Resilience framework with health impact factor:
+
+```
+Residual_Risk = (Exposure * Vulnerability * Health_Impact_Factor) / Resilience
+```
+
+**Exposure** incorporates:
+- NOAA Storm Events historical counts (event frequency by county)
+- OpenFEMA disaster declarations (declaration frequency by disaster type)
+- OpenFEMA NFIP claims (flood insurance claims as flood exposure proxy)
+- FEMA NRI baseline scores (census tract level, aggregated to county)
+
+**Vulnerability** uses CDC SVI theme percentiles with hazard-specific sub-weights:
+- Flood: socioeconomic (0.20), housing/transportation (0.30), household composition (0.15), minority status (0.15), infrastructure density (0.15), mobile home factor (0.10), elderly factor (0.05), rural isolation (0.15) [PH weights shown; EM weights differ]
+- Tornado, winter storm, thunderstorm: similar SVI-based sub-weight structures with hazard-appropriate adjustments
+
+**Resilience** uses inverse SVI scores as proxies for community adaptive capacity.
+
+**Health Impact Factor** scales risk by population health indicators (elderly percentage, poverty rate).
+
+**Mobile home adjustment for tornado risk:**
+```
 mobile_home_factor = min(1.0, mobile_home_percentage * 5)
 adjusted_tornado_risk = min(1.0, base_tornado_risk * (1 + mobile_home_factor))
 ```
 
-#### Flood Risk
+The four sub-type scores are combined into a single natural hazards score.
+
+### 4.2 Active Shooter Risk
+
+Multi-component risk model using:
+- Gun Violence Archive 2023 mass shooting data (static CSV)
+- NCES SSOCS 2019-2020 school safety survey data (static)
+- Census ACS demographics (population, density)
+- CDC SVI percentiles for vulnerability adjustment
+
+### 4.3 Health Metrics (Infectious Disease)
+
+Based on WI DHS respiratory illness surveillance data obtained via web scraper:
+- ILI (Influenza-like Illness) activity levels
+- COVID-19 metrics
+- RSV activity levels
+- Vaccination rate proxies
+
+### 4.4 Air Quality Risk
+
+- EPA AirNow API provides daily AQI readings at monitoring stations
+- Multi-point sampling: nearest monitoring stations to county centroid
+- SVI adjustment: housing/transportation vulnerability (up to 30% increase) and socioeconomic status (up to 20% increase)
+- Combined SVI multiplier capped at 1.5x
+
+### 4.5 Extreme Heat Risk
+
+Climate-adjusted heat vulnerability assessment using:
+- NOAA climate normals (1991-2020 baselines)
+- NWS heat forecast data (cached daily)
+- Census ACS: population 65+, poverty rate
+- CDC SVI percentiles
+- Climate trend factors and urban heat island multipliers
+
+### 4.6 Dam Failure Risk (EVR)
+
+Standalone EVR domain:
+- WI DNR Dam Safety Database (ArcGIS FeatureServer, primary)
+- USACE NID (ArcGIS FeatureServer, keyless, fallback -- cloud IPs may receive 503 errors)
+- Downstream population exposure based on dam height, hazard classification, and proximity
+- OpenFEMA NFIP claims as flood exposure proxy
+- SVI housing/transportation adjustment (up to 20% increase)
+
+### 4.7 Vector-Borne Disease Risk
+
+County-level Lyme disease and West Nile Virus assessment:
+- WI DHS EPHT CSV downloads: confirmed + probable case counts, crude rates per 100,000 for all 72 WI counties
+- Composite score: Lyme (65% weight) + WNV (35% weight), reflecting relative WI disease burden
+- Environmental factors: forest cover (USDA NLCD 2021), deer density (WI DNR)
+- Climate-adjusted range expansion projections (tick and mosquito habitat suitability under warming scenarios)
+- SVI socioeconomic adjustment (up to 15% increase)
+
+### 4.8 SVI Integration Across All Domains
+
+CDC/ATSDR Social Vulnerability Index 2022 data covers all 72 Wisconsin counties. Real RPL_THEMES percentile values fetched via single bulk ArcGIS API call. Four themes used:
+- Socioeconomic Status (RPL_THEME1)
+- Household Characteristics and Disability (RPL_THEME2)
+- Racial and Ethnic Minority Status and Language (RPL_THEME3)
+- Housing Type and Transportation (RPL_THEME4)
+
+SVI adjustment factors are configurable in `config/risk_weights.yaml` under `svi_adjustment_factors`.
+
+### 4.9 PHRAT Final Score Assembly
+
 ```python
-base_flood_risk = nri_data['flood_risk'] / 100  # Convert to 0-1 scale
-final_flood_risk = min(1.0, base_flood_risk * facility_multiplier)
+weights = {
+    'natural_hazards': 0.28,
+    'health_metrics': 0.17,
+    'active_shooter': 0.18,
+    'extreme_heat': 0.11,
+    'air_quality': 0.12,
+    'dam_failure': 0.07,
+    'vector_borne_disease': 0.07,
+}
+p = 2.0
+weighted_sum = sum(w * (risk ** p) for w, risk in zip(weights, risks))
+total_risk_score = max(0.0, min(1.0, weighted_sum ** (1.0 / p)))
 ```
 
-#### Tornado Risk
-```python
-base_tornado_risk = nri_data['tornado_risk'] / 100
-#mobile_home_factor = min(1.0, mobile_home_percentage * 5)
-#adjusted_tornado_risk = min(1.0, base_tornado_risk * (1 + mobile_home_factor))
-#final_tornado_risk = min(1.0, adjusted_tornado_risk * facility_multiplier)
-```
+## 5. Temporal Framework (BSTA)
 
-#### Winter Storm Risk
-```python
-base_winter_risk = nri_data['winter_risk'] / 100
-final_winter_risk = min(1.0, base_winter_risk * facility_multiplier)
-```
+CARA uses a Baseline-Seasonal-Trend-Acute (BSTA) temporal framework. In the default Annual Strategic Planning mode:
+- Baseline (60% weight): structural/foundational risks
+- Seasonal (25% weight): cyclical preparedness needs
+- Trend (15% weight): emerging long-term changes
+- Acute (informational only): current events for context
 
-### 3.2 Correctional Facility Impact
-Facility weights by type:
-- State Prison: 1.0 (highest risk weight)
-- County Jail: 0.8 (medium-high risk)
-- Juvenile Detention: 0.6 (medium risk)
-- Treatment Center: 0.4 (medium-low risk)
+A Dynamic Monitoring mode is available for emergency managers (40/20/20/20 split).
 
-Facility impact calculation:
-```python
-facility_impact = sum(weights[facility.type] for facility in facilities)
-facility_multiplier = 1 + min(0.2, facility_impact * 0.05)  # Max 20% increase
-```
+See `docs/temporal_framework_usage_strategy.md` for full details.
 
-### 3.3 Health Risk Calculation
-```python
-health_risk_score = (
-    ili_activity * 0.3 +
-    covid_activity * 0.3 +
-    rsv_activity * 0.2 +
-    vaccination_rate * 0.2
-)
-```
+## 6. Current Limitations
 
-### 3.4 Total Risk Score
-Weights for different risk components:
-- Natural Hazards: 35%
-- Health Metrics: 20%
-- Active Shooter: 15%
-- Extreme Heat: 15%
-- Cybersecurity: 15%
+### 6.1 Data Source Limitations
 
-```python
-total_risk_score = (
-    natural_hazard_score * 0.35 +
-    health_risk_score * 0.20 +
-    active_shooter_risk * 0.15 +
-    extreme_heat_risk * 0.15 +
-    cybersecurity_risk * 0.15
-)
-```
+1. **Census Data Timing**: ACS 5-year estimates have statistical margins of error. Rural areas have higher uncertainty. Data updated annually from local CSV files.
+2. **Static Datasets**: GVA (2023), NCES SSOCS (2019-2020), FEMA NRI, and climate normals are point-in-time snapshots that require manual updates.
+3. **USACE NID Cloud Access**: The NID ArcGIS FeatureServer may return 503 errors from cloud-hosted IPs. WI DNR Dam Safety Database is the primary source and works from cloud.
+4. **DHS Web Scraper**: Respiratory surveillance data depends on WI DHS page structure remaining stable. Format changes can break the scraper.
+5. **VBD Data Lag**: WI DHS EPHT CSV data may have reporting delays of several weeks.
 
-## 4. Current Limitations
+### 6.2 Methodological Limitations
 
-### 4.1 Data Source Limitations
-1. **Census Data Timing**
-   - Annual updates may not reflect very recent changes
-   - ACS estimates have statistical margins of error
-   - Rural areas may have higher uncertainty
+1. **SVI as Proxy**: Using SVI percentiles as vulnerability/resilience proxies assumes socioeconomic factors correlate with disaster outcomes. The SVI-cybersecurity linkage is particularly indirect (no empirical validation).
+2. **Supplementary Domains**: Cybersecurity and utilities domains use proxy indicators, not real incident data. Scores should be interpreted as relative estimates only.
+3. **Predictive Analysis**: The predictive analysis module (`utils/predictive_analysis.py`) uses `random.uniform()` to generate confidence intervals and simulated historical trends. These are labeled as modeled estimates, not empirical forecasts.
+4. **Health Impact Factor**: Based on available Census demographic proxies (elderly percentage, poverty rate), not direct epidemiological outcomes data.
+5. **Linear SVI Adjustments**: Multiplier-based SVI adjustments assume linear relationships between vulnerability and risk, which may oversimplify complex interactions.
 
-2. **API Reliability**
-   - Census API may have occasional downtime
-   - OpenFEMA API limited to facilities with past disaster declarations
-   - DHS data may have reporting delays
+### 6.3 Geographic Resolution
 
-3. **Correctional Facility Data**
-   - OpenFEMA API limited to facilities with past disaster declarations
-   - May miss newer facilities or those without FEMA interaction
-   - Facility capacity data not currently integrated
+- Most risk data is at county level. Census tract-level NRI data is aggregated to counties.
+- Tribal jurisdictions may have unique risk patterns not fully captured by county-level data.
+- Urban/rural differences within counties are only partially captured through SVI and population density.
 
-4. **Health Metrics**
-   - Limited to publicly available DHS data
-   - Some metrics may have reporting delays
-   - Rural areas may have less granular data
+## 7. Data Validation
 
+- Automated outlier detection and capping (SVI adjustment multipliers capped)
+- Cross-validation between NOAA Storm Events and OpenFEMA disaster declarations
+- Scheduler-managed data freshness with configurable cache expiration
+- Fallback data sources for critical APIs (WI DNR primary, USACE NID fallback for dams)
+- Risk scores clamped to [0.0, 1.0] range
 
-### 4.2 Methodological Limitations
-1. **Risk Weighting**
-   - Weights are predetermined and may not reflect local variations
-   - Linear scaling may oversimplify complex risk relationships
-   - Facility impact cap (20%) may not suit all scenarios
+## 8. Version History
 
-2. **Geographic Resolution**
-   - Some data only available at county level
-   - Census tract level data may not capture neighborhood variations
-   - Tribal areas may have different risk patterns not fully captured
+- v2.6.0 (March 2026): Thread-safety fixes, concurrency capacity increase, methodology documentation reconciled with implementation.
+- v2.5.0 (February 2026): Real CDC/ATSDR SVI 2022 data for all 72 WI counties. Dam failure and VBD as separate PHRAT domains. EVR framework for natural hazards.
+- v1.1.0 (April 2025): Coverage expanded to all 95 WI public health jurisdictions.
+- v1.0.0 (March 2025): Initial release.
 
-3. **Temporal Limitations**
-   - Historical trends limited by data availability
-   - Seasonal variations not fully incorporated
-   - Future projections based on simple trend analysis
+## 9. References
 
-## 5. Data Validation and Quality Assurance
-
-### 5.1 Census Data Validation
-- Automated checks for data completeness
-- Comparison with previous year's values
-- Statistical outlier detection
-- Fallback to representative data if API fails
-
-### 5.2 General Data Quality Measures
-1. **Data Completeness Checks:** Automated checks to ensure all necessary data fields are populated.
-2. **Data Consistency Checks:** Comparisons across data sources to identify inconsistencies.
-3. **Outlier Detection:** Identification and investigation of extreme values that deviate significantly from the norm.
-4. **Error Handling:** Mechanisms to gracefully manage API failures or data anomalies.
-5. **Data Documentation:** Clear and thorough documentation to describe data sources, processing steps, and potential limitations.
-
-## 6. Version Control and Updates
-- Current Version: 1.1.0
-- Last Updated: April 4, 2025
-- Next Scheduled Review: September 30, 2025
-
-### 6.1 Recent Updates
-- Version 1.1.0 (April 4, 2025)
-  - Added coverage for all 95 Wisconsin public health agencies including 84 public health departments and 11 tribal health centers
-  - Improved data scraping for Wisconsin DHS portal with specific handling for tribal health centers
-  - Enhanced jurisdiction mapping for all counties including areas with multiple jurisdictions
-  - Updated documentation to accurately reflect all covered health entities
-  
-- Version 1.0.0 (March 24, 2025)
-  - Initial release with 12 core jurisdictions
-  - Base implementation of risk calculation methodology
-  - Integration with Census, DHS, and FEMA data sources
-
-## 7. Contact and Support
-For questions about this methodology or to suggest improvements, please contact the development team.
+1. FEMA National Risk Index (NRI) - Wisconsin Census Tract Data
+2. NOAA NCEI Storm Events Database
+3. OpenFEMA APIs: Disaster Declarations Summaries v2, NFIP Redacted Claims v2, HMA Projects v4
+4. US Census Bureau American Community Survey (ACS 5-Year Estimates)
+5. CDC/ATSDR Social Vulnerability Index 2022
+6. WI DNR Dam Safety Database (ArcGIS FeatureServer)
+7. USACE National Inventory of Dams (NID ArcGIS FeatureServer)
+8. EPA AirNow API
+9. NOAA/NWS Heat Forecast API
+10. Wisconsin DHS Respiratory Illness Surveillance
+11. WI DHS Environmental Public Health Tracking (EPHT) - Lyme/WNV
+12. Gun Violence Archive 2023
+13. NCES School Safety and Climate Survey (SSOCS) 2019-2020
+14. CDC PHEP Capability Standards
+15. WICCI/NOAA Climate Projections

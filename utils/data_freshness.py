@@ -133,8 +133,8 @@ def get_data_freshness_summary():
                     ).order_by(DataSourceCache.fetched_at.desc()).first()
                     if record and (latest is None or record.fetched_at > latest.fetched_at):
                         latest = record
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Data freshness query failed for {ct}: {e}")
 
             if latest:
                 age_hours = latest.age_hours or 0

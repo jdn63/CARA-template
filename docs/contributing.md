@@ -150,17 +150,19 @@ def process_census_data(api_key: str, fips_code: str) -> Dict:
 
 ```
 cara-platform/
-├── core.py                 # Application factory
-├── app.py                  # Main routes and blueprints  
-├── models.py               # Database models
-├── utils/                  # Utility modules
-│   ├── risk_calculation.py # Risk assessment logic
-│   ├── data_processor.py   # Data processing utilities
-│   └── api_helpers.py      # API interaction helpers
-├── tests/                  # Test suite
-├── docs/                   # Documentation
-├── static/                 # CSS, JavaScript, images
-└── templates/              # Jinja2 templates
+    core.py                     Application factory
+    app.py                      Main routes and blueprints
+    models.py                   Database models
+
+    utils/                      Utility modules
+        risk_calculation.py     Risk assessment logic
+        data_processor.py       Data processing utilities
+        api_helpers.py          API interaction helpers
+
+    tests/                      Test suite
+    docs/                       Documentation
+    static/                     CSS, JavaScript, images
+    templates/                  Jinja2 templates
 ```
 
 ### Git Commit Guidelines

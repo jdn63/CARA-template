@@ -4,7 +4,7 @@
 
 This guide walks workshop participants through obtaining, configuring, and customizing the Comprehensive Automated Risk Assessment (CARA) platform for a new jurisdiction. It is written for facilitators working with participants who have no coding experience. The guide uses Libya as the example context but applies to any country or subnational region.
 
-The steps in this guide are the same regardless of how you choose to work with the code — whether on your own computer, on a cloud development platform, or any other environment that can run Python.
+The steps in this guide are the same regardless of how you choose to work with the code - whether on your own computer, on a cloud development platform, or any other environment that can run Python.
 
 ---
 
@@ -399,7 +399,7 @@ natural_hazards_weights:
 Open `data/census/wisconsin_demographics.csv`. You can open CSV files in any text editor or in a spreadsheet application like Excel or Google Sheets. It looks like this:
 
 ```
-county_name,total_population,population_65_plus,elderly_percentage
+county_name,total_population,population_65_plus,pct_aged_65_plus
 Adams,20654,4131,20.0
 Ashland,15666,3289,21.0
 ```
@@ -407,7 +407,7 @@ Ashland,15666,3289,21.0
 Replace with your jurisdiction data. Keep the same column structure but use your jurisdiction names (must match the `county` field in `jurisdictions_code.py`):
 
 ```
-county_name,total_population,population_65_plus,elderly_percentage
+county_name,total_population,population_65_plus,pct_aged_65_plus
 Tripoli,1158000,92640,8.0
 Benghazi,632000,50560,8.0
 Misrata,462000,36960,8.0

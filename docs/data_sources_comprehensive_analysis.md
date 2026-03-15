@@ -2,190 +2,200 @@
 
 ## Overview
 
-This document provides a complete mapping of all data sources used in the CARA application across all risk types and calculations. Understanding where data comes from is crucial for transparency and validation.
+This document provides a complete mapping of all data sources used in the CARA application across all risk domains. All external data is pre-fetched by APScheduler jobs and stored in PostgreSQL cache. No external API calls occur during user assessments.
 
 ## Data Source Categories
 
-### 🟢 **Strategic Data Sources** (Enhanced for Planning)
-These are primary data sources optimized for strategic planning:
+### Scheduler-Cached Data Sources (Active)
 
-1. **Local Census Data Files** ✅ 
-   - **Service**: County-specific CSV files with Wisconsin demographic data
-   - **Used For**: Mobile home percentages, elderly population, total population by county
-   - **Files**: `data/census/wisconsin_housing_data.csv`, `data/census/wisconsin_demographics.csv`
-   - **Benefits**: 100% offline capability, county-specific accuracy, no API failures
-   - **Refresh**: Manual updates with authoritative data
+These data sources are fetched on a schedule and cached in the database.
 
-2. **Strategic Planning Data Cache** ✅
-   - **Service**: Extended cache periods for annual planning cycles
-   - **Used For**: Climate projections, historical trends, baseline risk assessments
-   - **Cache Duration**: 30-180 days depending on data stability
-   - **Benefits**: Consistent strategic planning data, reduced API dependencies
+1. **NOAA NCEI Storm Events Database**
+- Used For: County-level storm event counts (flood, tornado, winter storm, thunderstorm)
+- Method: Bulk CSV download
+- Refresh: Quarterly
+- Module: `utils/noaa_storm_events.py`
 
-3. **FBI Crime Data API** ✅
-   - **Service**: FBI Uniform Crime Reporting (UCR) data
-   - **Used For**: Crime statistics for active shooter risk assessment
-   - **URL**: `https://api.fbi.gov/wanted/v1/`
-   - **Validation**: API key validated successfully
-   - **Refresh**: Every 90 days
+2. **OpenFEMA APIs (keyless)**
+- Disaster Declarations Summaries v2: WI disaster declarations by county and disaster type
+- NFIP Redacted Claims v2: Flood insurance claims by county (flood exposure proxy)
+- Hazard Mitigation Assistance Projects v4: Mitigation project data
+- Refresh: Weekly
+- Module: `utils/openfema_data.py`
 
-### 🟡 **Static/Local Data Sources**
-These are pre-loaded datasets stored locally in the application:
+3. **WI DNR Dam Safety Database (keyless, primary)**
+- Source: Wisconsin Repository of Dams ArcGIS FeatureServer
+- Used For: Dam inventory, hazard classifications, dam heights, downstream population exposure
+- Refresh: Weekly
+- Module: `utils/dam_failure_risk.py`, `utils/nid_data_fetcher.py`
 
-4. **FEMA National Risk Index (NRI)** 📁
-   - **Source**: Downloaded CSV from FEMA
-   - **File**: `attached_assets/NRI_Table_CensusTracts_Wisconsin_FloodTornadoWinterOnly.csv`
-   - **Used For**: Natural hazard risk scores (flooding, tornado, winter storm)
-   - **Last Updated**: Static file - needs manual updates
+4. **USACE NID ArcGIS FeatureServer (keyless, fallback)**
+- Source: National Inventory of Dams
+- Used For: Fallback dam inventory when WI DNR is unavailable
+- Limitation: Cloud-hosted IPs may receive 503 errors
+- Refresh: Weekly
 
-5. **Gun Violence Archive (GVA)** 📁
-   - **Source**: Downloaded CSV from gunviolencearchive.org
-   - **File**: `attached_assets/GunViolenceArchive 2023 mass shootings data.csv`
-   - **Used For**: Historical gun violence incidents for active shooter risk
-   - **Status**: Static file - needs manual updates
+5. **CDC/ATSDR SVI 2022 ArcGIS REST API (keyless)**
+- Used For: County-level Social Vulnerability Index percentile rankings for all 72 WI counties
+- Data: Real RPL_THEMES values (socioeconomic, household composition, minority status, housing type)
+- Method: Single bulk API call via `fetch_bulk_svi_data()`
+- Stored: `data/svi/wisconsin_svi_data.json`
+- Refresh: Annual
+- Module: `utils/svi_data.py`
 
-6. **CDC Social Vulnerability Index (SVI)** 📁
-   - **Source**: CDC/ATSDR SVI data
-   - **Location**: `data/svi/wisconsin_svi_data.json`
-   - **Used For**: Social vulnerability factors
-   - **Status**: Static with placeholder data - needs API integration
+6. **EPA AirNow API (keyed)**
+- Used For: Air Quality Index readings at monitoring stations near county centroids
+- Data: AQI values, pollutant categories, multi-point sampling
+- Refresh: Daily
+- Module: Air quality assessment in `utils/data_processor.py`
 
-7. **NCES School Safety Data** 📁
-   - **Source**: National Center for Education Statistics SSOCS survey
-   - **File**: `attached_assets/SSOCS 2019_2020 data.zip`
-   - **Used For**: School safety indicators in active shooter risk
-   - **Status**: Static 2019-2020 data
+7. **NOAA/NWS API (keyless)**
+- Used For: Heat forecasts, weather data for extreme heat risk
+- Refresh: Daily
 
-### 🔴 **Simulated/Placeholder Data Sources**
-These modules currently use simulated data:
+8. **WI DHS Respiratory Illness Surveillance**
+- Source: Web scraper targeting dhs.wisconsin.gov respiratory illness pages
+- Data: ILI activity levels, COVID-19 metrics, RSV activity, vaccination rate indicators
+- Refresh: Weekly
+- Module: `utils/dhs_data.py`, `utils/web_scraper.py`
 
-8. **Wisconsin DHS Health Data** ✅
-   - **Module**: `utils/dhs_data.py` with `utils/web_scraper.py`
-   - **Source**: Real-time web scraping of Wisconsin DHS respiratory illness pages
-   - **Gets**: Disease surveillance, activity levels, emergency department data
-   - **Status**: **SUCCESSFULLY INTEGRATED** - Live data from official DHS pages
+9. **WI DHS EPHT Lyme/WNV Surveillance**
+- Source: CSV downloads from dhs.wisconsin.gov/epht
+- Files: `lyme-county.csv`, `west-nile-data-county.csv`
+- Data: County-level confirmed + probable case counts, crude incidence rates per 100,000 for all 72 WI counties
+- Refresh: Weekly automated CSV download
+- Module: `utils/vbd_data_fetcher.py`, `utils/vector_borne_disease_risk.py`
 
-9. **Disease Surveillance Data** 🎲
-   - **Module**: `utils/disease_surveillance.py`
-   - **Should Get**: Flu, COVID-19, RSV activity levels
-   - **Currently**: Simulated seasonal patterns
-   - **Status**: **NEEDS REAL DATA SOURCE**
+### Static/Local Data Sources
 
-10. **Climate Projections** 🎲
-    - **Module**: `utils/climate_adjusted_risk.py`
-    - **Should Get**: Climate change projections, seasonal forecasts
-    - **Currently**: Default trend factors and simulated data
-    - **Status**: **NEEDS NOAA/CLIMATE API**
+These are pre-loaded datasets stored locally in the application.
 
-11. **Utilities Risk Data** 🎲
-    - **Module**: `utils/utilities_risk.py`
-    - **Should Get**: Power outages, infrastructure disruptions
-    - **Currently**: Statistical models with placeholder data
-    - **Status**: **NEEDS UTILITY COMPANY APIS**
+10. **FEMA National Risk Index (NRI)**
+- File: `attached_assets/NRI_Table_CensusTracts_Wisconsin_FloodTornadoWinterOnly.csv`
+- Used For: Census tract-level natural hazard baseline risk scores (flood, tornado, winter storm)
+- Update: Manual (static file from FEMA NRI download)
 
-## Risk Domain Data Source Breakdown
+11. **US Census Bureau ACS (Local CSV Files)**
+- Files: `data/census/wisconsin_housing_data.csv`, `data/census/wisconsin_demographics.csv`
+- Used For: Mobile home counts/percentages, population aged 65+, total population by county
+- Update: Annual manual update with latest ACS release
 
-### **Natural Hazards Risk**
-- ✅ **FEMA NRI**: Flood, tornado, winter storm baseline risk
-- ✅ **Strategic Planning Cache**: Long-term climate data with 30-180 day cache periods
-- 🔴 **Climate Projections**: Trend adjustments (currently simulated)
+12. **Gun Violence Archive 2023**
+- File: `attached_assets/GunViolenceArchive 2023 mass shootings data.csv`
+- Used For: Historical mass shooting incidents for active shooter risk assessment
+- Update: Manual (static 2023 data)
 
-### **Active Shooter Risk**
-- ✅ **Gun Violence Archive**: Historical incident data (static file)
-- ✅ **FBI Crime Data API**: Crime statistics
-- ✅ **Local Census Files**: County-specific demographics from CSV files (mobile homes, elderly population)
-- 📁 **NCES SSOCS**: School safety data (2019-2020)
-- 📁 **CDC SVI**: Social vulnerability factors
+13. **NCES School Safety Data (SSOCS)**
+- File: `attached_assets/SSOCS 2019_2020 data.zip`
+- Used For: School safety indicators in active shooter risk calculations
+- Update: Manual (static 2019-2020 data)
 
-### **Infectious Disease Risk**
-- 🔴 **Wisconsin DHS**: Disease surveillance (simulated)
-- 🔴 **Vaccination Data**: Coverage rates (simulated)
-- 🔴 **CDC FluView**: Influenza activity (not integrated)
+14. **NOAA Climate Normals 1991-2020**
+- Used For: Historical baseline for extreme heat risk calculations
+- Update: Static baselines embedded in code
 
-### **Cybersecurity Risk**
-- 🔴 **HHS Breach Portal**: Healthcare breaches (simulated)
-- 🔴 **CISA KEV**: Known exploited vulnerabilities (simulated)
-- 🔴 **FBI IC3**: Cybercrime reports (simulated)
+15. **USDA NLCD 2021 Forest Cover**
+- Used For: Forest cover percentage as tick habitat proxy for VBD risk
+- Update: Static data embedded in code
 
-### **Utilities/Infrastructure Risk**
-- 🔴 **Power Company APIs**: Outage data (simulated)
-- 🔴 **Supply Chain Disruptions**: Transportation/logistics (simulated)
-- 🔴 **Fuel Shortage Data**: Regional fuel availability (simulated)
+16. **WI DNR Deer Density**
+- Used For: Deer population density as tick host proxy for VBD risk
+- Update: Static data embedded in code
 
-### **Extreme Heat Risk**
-- ✅ **Strategic Climate Data**: Historical baseline with long-term projections (30-day cache)
-- 🔴 **Wisconsin DHS ED Visits**: Heat-related emergency visits (simulated)
-- 🔴 **Cooling Center Data**: Availability and capacity (simulated)
+## Risk Domain Data Source Mapping
+
+### Natural Hazards Risk (28% PHRAT weight)
+- FEMA NRI census tract data (static CSV)
+- NOAA NCEI Storm Events (quarterly scheduler cache)
+- OpenFEMA Disaster Declarations, NFIP Claims, HMA Projects (weekly scheduler cache)
+- Census ACS demographics (local CSV)
+- CDC SVI percentiles (annual scheduler cache)
+
+### Active Shooter Risk (18% PHRAT weight)
+- Gun Violence Archive 2023 (static CSV)
+- NCES SSOCS 2019-2020 (static)
+- Census ACS demographics (local CSV)
+- CDC SVI percentiles (annual scheduler cache)
+
+### Health Metrics / Infectious Disease Risk (17% PHRAT weight)
+- WI DHS respiratory illness surveillance (weekly web scraper cache)
+- Census ACS demographics (local CSV)
+
+### Air Quality Risk (12% PHRAT weight)
+- EPA AirNow API (daily scheduler cache)
+- Census ACS demographics (local CSV)
+- CDC SVI housing/socioeconomic themes (annual scheduler cache)
+
+### Extreme Heat Risk (11% PHRAT weight)
+- NOAA climate normals 1991-2020 (static)
+- NWS heat forecasts (daily scheduler cache)
+- Census ACS: population 65+, poverty rate (local CSV)
+- CDC SVI percentiles (annual scheduler cache)
+
+### Dam Failure Risk (7% PHRAT weight)
+- WI DNR Dam Safety Database (weekly scheduler cache, primary)
+- USACE NID (weekly scheduler cache, fallback)
+- OpenFEMA NFIP Claims (weekly scheduler cache)
+- CDC SVI housing/transportation theme (annual scheduler cache)
+- Census ACS demographics (local CSV)
+
+### Vector-Borne Disease Risk (7% PHRAT weight)
+- WI DHS EPHT Lyme county-level incidence rates (weekly scheduler cache)
+- WI DHS EPHT WNV county-level incidence rates (weekly scheduler cache)
+- USDA NLCD 2021 forest cover (static)
+- WI DNR deer density (static)
+- Climate-adjusted range expansion projections (static)
+- CDC SVI socioeconomic theme (annual scheduler cache)
+
+### Cybersecurity Risk (Supplementary, not in PHRAT)
+- Modeled from county characteristics and CDC SVI socioeconomic percentile
+- No direct cybersecurity incident data source
+- Proxy assumption: lower SVI socioeconomic scores correlate with fewer IT security resources
+
+### Utilities Risk (Supplementary, not in PHRAT for PH; 10% in EM)
+- Electrical outage risk: statistical model with proxy indicators
+- Utilities disruption risk: statistical model with proxy indicators
+- Supply chain disruption risk: statistical model with proxy indicators
+- Fuel shortage risk: statistical model with proxy indicators
+- No real utility company data sources
 
 ## Data Refresh Schedule
 
-| Data Source | Refresh Interval | Last Updated | Status |
-|-------------|------------------|--------------|---------|
-| Strategic Planning Data | 30-90 days | Cached | ✅ Active |
-| Disease Surveillance | 7-30 days | Cached API | ✅ Active |
-| Air Quality Data | 1-30 days | Cached API | ✅ Active |
-| FEMA NRI Data | 180 days | Cached | ✅ Active |
-| SVI Data | 90 days | Cached | ✅ Active |
-| Crime Statistics | 30-90 days | Cached API | ✅ Active |
-| Census Data | Local Files | No refresh needed | ✅ Active |
-| Climate Projections | 365 days | Simulated | 🔴 Needs API |
+| Data Source | Refresh Interval | Cache Location | Status |
+|-------------|------------------|----------------|--------|
+| NOAA Storm Events | Quarterly | PostgreSQL cache | Active |
+| OpenFEMA (3 endpoints) | Weekly | PostgreSQL cache | Active |
+| WI DNR Dam Safety | Weekly | PostgreSQL cache | Active |
+| USACE NID (fallback) | Weekly | PostgreSQL cache | Active (may 503 from cloud) |
+| CDC SVI 2022 | Annual | JSON file + cache | Active |
+| EPA AirNow | Daily | PostgreSQL cache | Active |
+| NOAA/NWS Heat | Daily | PostgreSQL cache | Active |
+| WI DHS Respiratory | Weekly | PostgreSQL cache | Active |
+| WI DHS EPHT (Lyme/WNV) | Weekly | PostgreSQL cache | Active |
+| Census ACS | Manual/Annual | Local CSV files | Active |
+| FEMA NRI | Manual | Local CSV file | Active |
+| GVA 2023 | Manual | Local CSV file | Static |
+| NCES SSOCS | Manual | Local ZIP file | Static (2019-2020) |
 
-## Critical Data Gaps
+## Known Data Gaps
 
-### **Completed Strategic Enhancements** ✅
-1. **Local Census Data**: County-specific demographics with no API dependencies
-2. **Strategic Cache System**: Extended cache periods optimized for annual planning
-3. **Enhanced Reliability**: Offline capability with graceful API fallbacks
-4. **Data Accuracy**: County-level precision vs regional estimates
+### Not Currently Addressable
+1. **Real cybersecurity incident data**: No free, county-level cybersecurity breach API exists. HHS Breach Portal, FBI IC3, and CISA KEV do not provide county-level data suitable for jurisdictional risk scoring.
+2. **Real utility outage data**: Requires data-sharing agreements with utility companies. No public API available.
+3. **Real-time hospital capacity**: Would require WHA API access or similar. Not currently integrated.
 
-### **Medium Priority** (Enhances Accuracy)
-1. **Utility Company APIs**: Real power outage and infrastructure data
-2. **HHS Breach Portal API**: Healthcare cybersecurity incidents
-3. **CISA API**: Known exploited vulnerabilities
-4. **Transportation APIs**: Supply chain disruption data
-
-### **Low Priority** (Nice to Have)
-1. **Local Emergency Management APIs**: County-specific preparedness data
-2. **Hospital APIs**: Emergency department capacity and usage
-3. **Educational APIs**: Real-time school safety and enrollment data
-
-## Recommendations for Data Source Improvements
-
-### **Immediate Actions**
-1. **Integrate CDC SVI API** - Replace placeholder social vulnerability data
-2. **Update GVA Data** - Download current year mass shooting data
-3. **Add NOAA Climate APIs** - Replace simulated seasonal forecasts
-
-### **Short-term Improvements** (1-3 months)
-1. **Wisconsin DHS Integration** - Work with state health department for API access
-2. **HHS Breach Portal API** - Add real cybersecurity incident data
-3. **CISA Integration** - Connect to known exploited vulnerabilities feed
-
-### **Long-term Enhancements** (3-12 months)
-1. **Utility Company Partnerships** - Arrange data sharing agreements
-2. **Local Emergency Management Integration** - County-specific preparedness data
-3. **Hospital System APIs** - Emergency department utilization data
-
-## Data Quality Assurance
-
-### **Current Validation**
-- ✅ API key validation for external services
-- ✅ Data type checking and sanitization
-- ✅ Geographic boundary validation for Wisconsin
-
-### **Needed Improvements**
-- 🔴 Real-time data freshness monitoring
-- 🔴 Data source outage detection and alerting
-- 🔴 Automated data quality scoring
-- 🔴 Source data lineage tracking
+### Could Be Improved
+1. **GVA data freshness**: Currently using 2023 data. Could be updated annually with new GVA download.
+2. **NCES SSOCS data**: 2019-2020 vintage. Next SSOCS release would improve school safety indicators.
+3. **Climate projections**: Currently using static NOAA climate normals and basic trend factors. Could integrate CMIP6 downscaled projections for Wisconsin.
 
 ## Transparency Notes
 
-**For Public Health Officials**: The application currently uses a mix of real-time APIs, static datasets, and simulated data. Risk scores should be interpreted as analytical estimates rather than definitive assessments, particularly for domains relying on simulated data.
+**For Public Health Officials**: CARA uses a mix of scheduler-cached API data, static datasets, and proxy-modeled estimates. The seven primary PHRAT domains use real data from authoritative sources. The two supplementary domains (cybersecurity, utilities) use statistical models with proxy indicators and should be interpreted as relative planning estimates, not empirical risk measurements.
 
-**For Technical Users**: All data source configurations are documented in `data/config/scheduler_config.json`, and individual modules contain detailed information about their data sources and processing methods.
+**For Technical Users**: Data source configurations are in `data/config/scheduler_config.json`. Risk domain weights are in `config/risk_weights.yaml` and hard-coded in `utils/data_processor.py`. SVI adjustment factors are configurable in the weights YAML. Individual risk modules contain detailed documentation of their data processing methods.
 
 ---
 
-**Last Updated**: July 5, 2025  
-**Next Review**: Update when new data sources are integrated
+**Last Updated**: March 2026
+**Version**: 2.6.0

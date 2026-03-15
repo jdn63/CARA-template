@@ -63,7 +63,7 @@ This document provides a comprehensive reference for all data variables, risk me
 | `climate_trend_factor` | Float | 1.0 - 1.5 | Multiplier | Climate change amplification factor |
 | `heat_island_factor` | Float | 1.0 - 1.4 | Multiplier | Urban heat island amplification |
 | `cooling_degree_days` | Integer | 0 - 2000 | Degree Days | Annual cooling energy demand |
-| `heat_days_90f_projected` | Integer | 0 - 60 | Days/year | Projected 90°F+ days by 2050 |
+| `heat_days_90f_projected` | Integer | 0 - 60 | Days/year | Projected 90F+ days by 2050 |
 
 ### Air Quality Risk (Strategic)
 
@@ -159,11 +159,16 @@ This document provides a comprehensive reference for all data variables, risk me
 
 | Source | Update Frequency | Variables | Coverage |
 |--------|-----------------|-----------|----------|
-| US Census Bureau | Annual | Demographics, housing | All jurisdictions |
-| NOAA/NWS | Hourly | Weather, climate data | Statewide |
-| EPA AirNow | Hourly | Air quality indices | Monitoring stations |
-| Wisconsin DHS | Daily | Health surveillance | Statewide |
-| FEMA | As needed | Disaster declarations | Statewide |
+| US Census Bureau ACS | Annual (local CSV) | Demographics, housing, mobile homes | All jurisdictions |
+| NOAA NCEI Storm Events | Quarterly (scheduler cache) | Storm event counts by type | County level |
+| NOAA/NWS | Daily (scheduler cache) | Heat forecasts, weather data | Statewide |
+| EPA AirNow | Daily (scheduler cache) | Air quality indices | Monitoring stations |
+| OpenFEMA (3 endpoints) | Weekly (scheduler cache) | Declarations, NFIP claims, HMA | Statewide |
+| WI DNR Dam Safety | Weekly (scheduler cache) | Dam inventory, hazard classifications | Statewide |
+| CDC/ATSDR SVI 2022 | Annual (scheduler cache) | Social vulnerability percentiles | All 72 WI counties |
+| WI DHS Respiratory | Weekly (web scraper cache) | ILI, COVID, RSV activity | Statewide |
+| WI DHS EPHT (VBD) | Weekly (CSV download cache) | Lyme/WNV incidence rates | All 72 WI counties |
+| FEMA NRI | Static file | Census tract hazard scores | Statewide |
 
 ### Internal Data Processing
 
@@ -172,20 +177,23 @@ This document provides a comprehensive reference for all data variables, risk me
 | Jurisdiction boundaries | As needed | Wisconsin DHS | Geographic boundaries |
 | Tribal territories | As needed | Bureau of Indian Affairs | Tribal jurisdiction data |
 | HERC regions | As needed | Wisconsin DHS | Health region assignments |
-| Risk models | Quarterly | Georgetown research | Algorithm parameters |
+| Risk weights | Configurable | `config/risk_weights.yaml` | Domain weights, SVI adjustment factors |
 
 ## Calculated Fields
 
 ### Risk Score Formulas
 
 ```
-Overall Risk = (Exposure × Vulnerability ÷ Resilience) × Domain_Weights
+PHRAT Quadratic Mean:
+Total Risk = sqrt(w1 * R1^2 + w2 * R2^2 + ... + w7 * R7^2)
 
 Where:
-- Exposure: Likelihood and intensity of hazard occurrence
-- Vulnerability: Population and infrastructure susceptibility  
-- Resilience: Capacity to prepare, respond, and recover
-- Domain_Weights: Strategic planning framework weights
+- R1..R7: Individual domain risk scores (0.0-1.0) from 7 primary domains
+- w1..w7: Domain weights from config/risk_weights.yaml (sum to 1.0)
+- p=2 (quadratic mean emphasizes higher-risk domains)
+
+Per-Domain (EVR Framework for natural hazards, dam failure):
+Residual Risk = (Exposure * Vulnerability * Health_Impact_Factor) / Resilience
 ```
 
 ### Confidence Calculations
@@ -202,7 +210,7 @@ Where:
 ### Climate Adjustment Factors
 
 ```
-Climate_Adjusted_Risk = Base_Risk × Climate_Trend_Factor × Heat_Island_Factor
+Climate_Adjusted_Risk = Base_Risk * Climate_Trend_Factor * Heat_Island_Factor
 
 Where:
 - Base_Risk: Historical baseline risk level
@@ -261,10 +269,10 @@ Where:
 
 ### Accuracy Standards
 
-- **Geographic Data**: ±100 meter accuracy for boundaries
-- **Population Data**: ±5% accuracy (latest census estimates)
-- **Risk Scores**: ±0.05 normalized scale accuracy
-- **Temporal Data**: ±1 hour for current conditions
+- **Geographic Data**: +/-100 meter accuracy for boundaries
+- **Population Data**: +/-5% accuracy (latest census estimates)
+- **Risk Scores**: +/-0.05 normalized scale accuracy
+- **Temporal Data**: +/-1 hour for current conditions
 
 ### Update Frequencies
 
@@ -276,8 +284,8 @@ Where:
 
 ---
 
-*This data dictionary is maintained as part of the CARA platform documentation and reflects the current data model. For questions about specific variables or methodologies, contact the Georgetown University research team.*
+*This data dictionary is maintained as part of the CARA platform documentation and reflects the current data model.*
 
-**Last Updated**: January 2024  
-**Version**: 2.1  
+**Last Updated**: March 2026
+**Version**: 2.6.0
 **Coverage**: 95 Wisconsin Public Health Jurisdictions

@@ -11,7 +11,8 @@
       "Great Lakes Integrated Sciences and Assessments (GLISA)"
     ],
     "projection_period": "2030-2050 (mid-century, RCP4.5/SSP2-4.5)",
-    "baseline_period": "1986-2005"
+    "baseline_period": "1986-2005",
+    "validation_note": "exposure_multiplier values must fall within climate_projection_ranges defined in config/risk_weights.yaml"
   },
   "flood": {
     "exposure_multiplier": 1.20,

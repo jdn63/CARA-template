@@ -12,7 +12,7 @@ services:
     runtime: python
     region: oregon
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 main:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT -c gunicorn.conf.py main:app
     envVars:
       - key: SESSION_SECRET
         generateValue: true
@@ -24,12 +24,16 @@ services:
         value: "3.11.4"
       - key: FLASK_ENV
         value: production
+      - key: CENSUS_API_KEY
+        sync: false
       - key: AIRNOW_API_KEY
         sync: false
       - key: OPENWEATHERMAP_API_KEY
         sync: false
       - key: FEMA_RAPT_API_KEY
         sync: false
+      - key: ENABLE_SCRAPERS
+        value: "1"
       - key: SENTRY_DSN
         sync: false
     healthCheckPath: /health

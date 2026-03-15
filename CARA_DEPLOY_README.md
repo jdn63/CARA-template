@@ -1,9 +1,10 @@
 # CARA - Comprehensive Automated Risk Assessment
 
-A Flask-based web application for public health departments providing multi-domain risk scoring, real-time data integration, and actionable preparedness guidance.
+A Flask-based web application for Wisconsin public health departments providing multi-domain risk scoring, real-time data integration, and actionable preparedness guidance.
 
-**Version**: 2.4
-**License**: AGPL-3.0
+**Version**: 2.5  
+**Developer**: Jaime Niedermeier, PHEP Coordinator at Wisconsin Department of Health Services  
+**Affiliation**: Georgetown University Graduate Research Project
 
 ---
 
@@ -24,7 +25,10 @@ A Flask-based web application for public health departments providing multi-doma
 
 ## Overview
 
-CARA provides comprehensive risk assessment capabilities for public health jurisdictions. This template version includes 5 example jurisdictions that you can replace with your own.
+CARA provides comprehensive risk assessment capabilities for 95 Wisconsin jurisdictions:
+- 72 County Health Departments
+- 12 City/Municipal Health Departments
+- 11 Tribal Nations
 
 The platform uses a multi-domain risk scoring system with transparent, documented methodology.
 
@@ -32,10 +36,10 @@ The platform uses a multi-domain risk scoring system with transparent, documente
 
 ## Features
 
-- **Multi-Domain Risk Assessment**: Natural hazards, health metrics, active shooter, extreme heat, and air quality
-- **Regional Dashboards**: Aggregated risk data for configurable regional groupings
+- **Multi-Domain Risk Assessment**: Natural hazards, health metrics, active shooter, extreme heat, and cybersecurity
+- **HERC Regional Dashboards**: Aggregated risk data for 7 Healthcare Emergency Readiness Coalition regions
 - **GIS Export**: Export risk data as CSV, GeoJSON, and shapefiles for ArcGIS/QGIS
-- **Kaiser Permanente HVA Export**: Compatible Excel reports for regional groupings
+- **Kaiser Permanente HVA Export**: Compatible Excel reports for HERC regions
 - **Interactive Maps**: Folium-based geospatial visualizations
 - **Strategic Planning Mode**: Long-term risk assessment with adjusted temporal weights
 - **Real-time Data Integration**: Air quality, weather alerts, disease surveillance
@@ -46,60 +50,61 @@ The platform uses a multi-domain risk scoring system with transparent, documente
 
 ```
 cara/
-├── main.py                 # Application entry point
-├── core.py                 # Flask app factory (create_app)
-├── models.py               # SQLAlchemy database models
-├── render.yaml             # Render.com deployment config
-├── requirements.txt        # Python dependencies
-│
-├── routes/                 # Flask blueprints
-│   ├── __init__.py
-│   ├── public.py          # Home, methodology, docs
-│   ├── dashboard.py       # Main dashboard routes
-│   ├── api.py             # REST API endpoints
-│   ├── herc.py            # Regional dashboards
-│   └── gis_export.py      # GIS export functionality
-│
-├── templates/              # Jinja2 HTML templates
-│   ├── base.html
-│   ├── index.html
-│   ├── dashboard.html
-│   ├── methodology.html
-│   ├── components/        # Reusable components
-│   ├── docs/              # Documentation pages
-│   └── errors/            # Error pages
-│
-├── static/                 # Static assets
-│   ├── css/
-│   ├── js/
-│   └── images/
-│
-├── utils/                  # Utility modules (~50 files)
-│   ├── main_risk_calculator.py
-│   ├── herc_risk_aggregator.py
-│   ├── data_processor.py
-│   ├── config_manager.py
-│   └── ... (many more)
-│
-├── config/                 # Configuration files
-│   └── risk_weights.yaml   # Risk domain weights
-│
-├── data/                   # Data files
-│   ├── census/            # Demographics CSV files
-│   ├── herc/              # Regional definitions
-│   ├── gva_reports/       # Gun Violence Archive data
-│   ├── nces/              # NCES school safety data (upload separately)
-│   └── svi/               # Social Vulnerability Index data
-│
-├── tests/                  # Test suite
-│   ├── conftest.py
-│   ├── test_api.py
-│   └── test_basic.py
-│
-└── docs/                   # Documentation
-    ├── deployment_guide.md
-    ├── risk_assessment_methodology.md
-    └── data_dictionary.md
+    main.py                     Application entry point
+    core.py                     Flask app factory (create_app)
+    models.py                   SQLAlchemy database models
+    render.yaml                 Render.com deployment config
+    requirements.txt            Python dependencies
+    .env.example                Environment variable template
+
+    routes/                     Flask blueprints
+        __init__.py
+        public.py               Home, methodology, docs
+        dashboard.py            Main dashboard routes
+        api.py                  REST API endpoints
+        herc.py                 HERC regional dashboards
+        gis_export.py           GIS export functionality
+
+    templates/                  Jinja2 HTML templates
+        base.html
+        index.html
+        dashboard.html
+        methodology.html
+        components/             Reusable components
+        docs/                   Documentation pages
+        errors/                 Error pages
+
+    static/                     Static assets
+        css/
+        js/
+        images/
+
+    utils/                      Utility modules (~50 files)
+        main_risk_calculator.py
+        herc_risk_aggregator.py
+        data_processor.py
+        config_manager.py
+        ... (many more)
+
+    config/                     Configuration files
+        risk_weights.yaml       Risk domain weights
+
+    data/                       Data files
+        census/                 Demographics CSV files
+        herc/                   HERC region definitions
+        tribal/                 Tribal boundary GeoJSON
+        nces/                   NCES school safety data (upload separately)
+        wi_herc_regions.geojson
+
+    tests/                      Test suite
+        conftest.py
+        test_api.py
+        test_basic.py
+
+    docs/                       Documentation
+        deployment_guide.md
+        risk_assessment_methodology.md
+        data_dictionary.md
 ```
 
 ---
@@ -117,7 +122,7 @@ cara/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/cara.git
+git clone https://github.com/your-username/cara.git
 cd cara
 ```
 
@@ -169,7 +174,7 @@ Open http://localhost:5000 in your browser.
 
 1. Push your code to GitHub
 2. Go to [Render Dashboard](https://dashboard.render.com)
-3. Click "New" > "Blueprint"
+3. Click "New", then "Blueprint"
 4. Connect your GitHub repository
 5. Render will automatically detect `render.yaml` and configure:
    - PostgreSQL database
@@ -216,14 +221,14 @@ Open http://localhost:5000 in your browser.
 
 ## Data Files
 
-### Included in Repository
+### Included in ZIP
 
-- `data/census/` - Population, age, and housing data
-- `data/herc/` - Regional definitions (rename/restructure for your jurisdiction)
-- `data/svi/` - Social Vulnerability Index data
+- `data/census/wisconsin_demographics.csv` - Population and age data
+- `data/census/wisconsin_housing_data.csv` - Housing vulnerability data
+- `data/herc/herc_regions.json` - HERC region definitions
+- `data/tribal/wisconsin_tribal_boundaries_filtered.geojson` - Tribal boundaries
 - `data/gva_reports/` - Gun Violence Archive data
 - `config/risk_weights.yaml` - Risk calculation weights
-- `config/county_baselines.yaml` - Jurisdiction-specific baseline scores
 
 ### Upload Separately (Large Files)
 
@@ -244,7 +249,7 @@ The following files are NOT included due to size. Download and upload to `data/n
 | `/` | GET | Home page |
 | `/dashboard/<id>` | GET | Jurisdiction dashboard |
 | `/methodology` | GET | Risk methodology documentation |
-| `/herc-dashboard/<region>` | GET | Regional dashboard |
+| `/herc-dashboard/<region>` | GET | HERC regional dashboard |
 | `/api/health` | GET | Health check endpoint |
 | `/api/gis/export` | POST | GIS data export |
 
@@ -252,23 +257,38 @@ The following files are NOT included due to size. Download and upload to `data/n
 
 ## Risk Domains
 
-CARA assesses risk across five primary domains:
+CARA assesses risk across 7 primary domains aggregated via the PHRAT quadratic mean formula, plus 2 supplementary domains reported separately.
 
 | Domain | Weight | Description |
 |--------|--------|-------------|
-| Natural Hazards | 33% | FEMA NRI data, NOAA storm events |
-| Health Metrics | 20% | Disease surveillance, SVI |
-| Active Shooter | 20% | School safety, venue analysis |
-| Extreme Heat | 13% | Heat vulnerability, forecasts |
-| Air Quality | 14% | Environmental health, AQI |
+| Natural Hazards | 28% | NOAA storm events, OpenFEMA claims (EVR framework) |
+| Active Shooter | 18% | NCES school safety data, Gun Violence Archive |
+| Health Metrics | 17% | Disease surveillance, vaccination rates |
+| Air Quality | 12% | EPA AirNow, SVI-adjusted environmental health |
+| Extreme Heat | 11% | Heat vulnerability, NWS forecasts |
+| Dam Failure | 7% | WI DNR Dam Safety Database, NFIP flood zone overlap |
+| Vector-Borne Disease | 7% | Lyme, West Nile Virus (WI DHS EPHT surveillance) |
+| Cybersecurity | Supplementary | Infrastructure cyber threats (proxy indicators) |
+| Utilities Risk | Supplementary | Electrical, water/sewer, supply chain (proxy indicators) |
 
-Supplementary domains (Cybersecurity, Utilities) are assessed separately using proxy indicators.
+---
+
+## Temporal Framework (Strategic Planning Mode)
+
+| Component | Weight | Description |
+|-----------|--------|-------------|
+| Baseline | 60% | Historical averages |
+| Seasonal | 25% | Seasonal patterns |
+| Trend | 15% | Long-term trends |
+| Acute | 0% | Excluded for strategic planning |
 
 ---
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See the [LICENSE](LICENSE) file for details.
+This tool was developed by Jaime Niedermeier, PHEP Coordinator at the Wisconsin Department of Health Services, in her capacity as a graduate student at Georgetown University. 
+
+The CARA tool is not affiliated with, nor a reflection of or recommendation by, the Wisconsin Department of Health Services.
 
 ---
 

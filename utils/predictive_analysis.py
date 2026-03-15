@@ -7,7 +7,6 @@ statistical methods to project future risk levels.
 """
 
 import logging
-import random
 from typing import Dict, List, Any
 
 # Set up logging for this module
@@ -60,8 +59,8 @@ class RiskPredictor:
             confidence_intervals = {}
             for risk_type, risk_values in predictions.items():
                 confidence_intervals[risk_type] = {
-                    'lower': [max(0.1, val - random.uniform(0.05, 0.15)) for val in risk_values],
-                    'upper': [min(0.9, val + random.uniform(0.05, 0.15)) for val in risk_values]
+                    'lower': [max(0.1, val - 0.10) for val in risk_values],
+                    'upper': [min(0.9, val + 0.10) for val in risk_values]
                 }
             
             # Generate trend analysis
@@ -132,8 +131,8 @@ class RiskPredictor:
             confidence_intervals = {}
             for risk_type, risk_values in predictions.items():
                 confidence_intervals[risk_type] = {
-                    'lower': [max(0.1, val - random.uniform(0.03, 0.10)) for val in risk_values],
-                    'upper': [min(0.9, val + random.uniform(0.03, 0.10)) for val in risk_values]
+                    'lower': [max(0.1, val - 0.07) for val in risk_values],
+                    'upper': [min(0.9, val + 0.07) for val in risk_values]
                 }
             
             # Generate trend analysis
@@ -187,9 +186,7 @@ class RiskPredictor:
         
         value = current_value
         for _ in range(years):
-            # Add random variation and trend
-            value += trend + random.uniform(-volatility, volatility)
-            # Ensure the value stays within bounds
+            value += trend
             value = max(0.1, min(0.9, value))
             projected_values.append(value)
             
@@ -248,8 +245,7 @@ class RiskPredictor:
         
         This is a placeholder for more sophisticated model training
         """
-        logger.info(f"Training prediction models with {len(self.historical_data)} historical data points")
-        # In a real implementation, this would train statistical models
+        logger.debug(f"train_models() called with {len(self.historical_data)} historical data points — no model training implemented; returns True immediately")
         return True
         
     def predict_future_risks(self, years=3):
@@ -264,13 +260,12 @@ class RiskPredictor:
         """
         logger.info(f"Predicting risks for the next {years} years")
         
-        # This is a placeholder implementation
-        # Create simple predictions with random variation
+        # Placeholder implementation returning static estimates
         return {
-            'total_risk': [random.uniform(0.4, 0.6) for _ in range(years)],
-            'natural_hazards_risk': [random.uniform(0.3, 0.7) for _ in range(years)],
-            'health_risk': [random.uniform(0.2, 0.5) for _ in range(years)],
-            'active_shooter_risk': [random.uniform(0.1, 0.4) for _ in range(years)]
+            'total_risk': [0.50] * years,
+            'natural_hazards_risk': [0.50] * years,
+            'health_risk': [0.35] * years,
+            'active_shooter_risk': [0.25] * years
         }
         
     def calculate_trend_strength(self):
@@ -303,10 +298,10 @@ class RiskPredictor:
         # Placeholder implementation
         # In a real system, this would use actual historical and predicted data
         return {
-            'total_risk': [0.45, 0.48, 0.52] + [random.uniform(0.4, 0.6) for _ in range(3)],
-            'natural_hazards_risk': [0.35, 0.42, 0.40] + [random.uniform(0.3, 0.7) for _ in range(3)],
-            'health_risk': [0.25, 0.22, 0.20] + [random.uniform(0.2, 0.5) for _ in range(3)],
-            'active_shooter_risk': [0.15, 0.14, 0.16] + [random.uniform(0.1, 0.4) for _ in range(3)]
+            'total_risk': [0.45, 0.48, 0.52, 0.51, 0.50, 0.49],
+            'natural_hazards_risk': [0.35, 0.42, 0.40, 0.41, 0.42, 0.43],
+            'health_risk': [0.25, 0.22, 0.20, 0.20, 0.21, 0.22],
+            'active_shooter_risk': [0.15, 0.14, 0.16, 0.16, 0.15, 0.15]
         }
         
     def _generate_empty_prediction_structure(self):

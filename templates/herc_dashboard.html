@@ -6,9 +6,9 @@
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
-                <h2>Region Risk Analysis Dashboard</h2>
+                <h2>HERC Region Risk Analysis Dashboard</h2>
                 <p class="text-muted">Comprehensive analysis for {{ risk_data.name }}</p>
-                <span class="badge bg-info me-2">Region</span>
+                <span class="badge bg-info me-2">HERC Region</span>
                 <a href="/methodology" class="btn btn-sm btn-outline-info" target="_blank">
                     View Risk Assessment Methodology
                 </a>
@@ -27,12 +27,12 @@
         </div>
     </div>
 
-    <!-- Region Overview -->
+    <!-- HERC Region Overview -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">Region Overview</h5>
+                    <h5 class="card-title mb-0">HERC Region Overview</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -46,7 +46,7 @@
                         </div>
                         <div class="col-md-6">
                             <h6>Healthcare Data Notes</h6>
-                            <p>Additional hospital and healthcare system capacity data can be accessed directly from your regional hospital association or through the regional coordinator.</p>
+                            <p>Additional hospital and healthcare system capacity data can be accessed directly from the Wisconsin Hospital Association (WHA) Information Center or through the HERC coordinator.</p>
                             <p>For emergency preparedness planning, please consult the most current healthcare resource data from official sources.</p>
                         </div>
                     </div>
@@ -312,7 +312,7 @@
                     <div class="row">
                         <div class="col-md-8">
                             <h6>Kaiser Permanente HVA Tool Compatibility</h6>
-                            <p>The risk data for this region has been formatted for use with the Kaiser Permanente HVA Tool used for Hospital Preparedness Program (HPP) planning.</p>
+                            <p>The risk data for this HERC region has been formatted for use with the Kaiser Permanente HVA Tool used for Hospital Preparedness Program (HPP) planning.</p>
                             <p>To download data in a compatible format for importing into the Kaiser Permanente HVA Tool:</p>
                             <a href="/herc-kp-hva-export/{{ risk_data.herc_id }}" class="btn btn-primary">
                                 Export for Kaiser Permanente HVA
@@ -337,7 +337,7 @@
                 <div class="card-body bg-dark text-white">
                     <h6>Data Sources</h6>
                     <p class="small mb-0">Risk data in this dashboard is aggregated from the following counties: {{ risk_data.counties|join(', ') }}</p>
-                    <p class="small mb-0">Additional regional healthcare data can be accessed through your regional coordinator.</p>
+                    <p class="small mb-0">Additional regional healthcare data can be accessed through the <a href="https://www.dhs.wisconsin.gov/preparedness/healthcare/index.htm" target="_blank" class="text-info">HERC coordinator</a>.</p>
                     <div class="small mt-1">
                         Last updated: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}
                     </div>
@@ -352,7 +352,7 @@
 <!-- Page-specific JavaScript -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Region Dashboard loaded');
+    console.log('HERC Dashboard loaded');
 });
 </script>
 {% endblock %}

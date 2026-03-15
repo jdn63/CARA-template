@@ -6,9 +6,11 @@ in CSV and GeoJSON formats for use in ArcGIS and other GIS platforms.
 """
 
 import os
+import io
+import csv
 import logging
 from datetime import datetime
-from flask import Blueprint, send_file, jsonify, request, abort
+from flask import Blueprint, send_file, jsonify, request, abort, Response
 from werkzeug.exceptions import NotFound
 
 from core import db
@@ -23,39 +25,103 @@ gis_export_bp = Blueprint('gis_export', __name__, url_prefix='/api/gis')
 @gis_export_bp.route('/export/all', methods=['GET', 'POST'])
 def export_all_data():
     """
-    Start an asynchronous export job for all jurisdiction risk data.
-    
-    Returns job ID for status polling and eventual download.
+    Synchronously generate CSV export for all jurisdiction risk data.
+    Returns the CSV file directly as a download.
     """
     try:
-        logger.info("Starting async GIS data export job")
+        logger.info("Starting synchronous GIS CSV export for all jurisdictions")
         
-        # Create new export job
-        job = ExportJob(
-            export_type='all_jurisdictions',
-            status='queued',
-            cache_freshness_minutes=30,
-            params={}
+        from utils.jurisdictions_code import jurisdictions
+        from utils.data_processor import process_risk_data
+        from utils.main_risk_calculator import CARARiskCalculator
+        from utils.jurisdiction_mapping_code import jurisdiction_mapping
+
+        exporter = CARAGISExporter()
+        all_data = []
+
+        for j in jurisdictions:
+            try:
+                jid = j['id']
+                risk_data = process_risk_data(jid)
+                calculator = CARARiskCalculator(jid)
+                comprehensive_risk = calculator.calculate_comprehensive_risk(risk_data)
+
+                county_name = jurisdiction_mapping.get(jid, 'Unknown')
+                centroid = exporter._get_jurisdiction_centroid(county_name)
+                domain_scores = comprehensive_risk.get('domain_scores', {})
+                normalized_scores = comprehensive_risk.get('normalized_scores', {})
+                natural_hazards = risk_data.get('natural_hazards', {})
+
+                natural_hazards_risk = domain_scores.get('natural_hazards', normalized_scores.get('natural_hazards', 0.3))
+                health_risk = domain_scores.get('health_metrics', normalized_scores.get('health_metrics', 0.3))
+                active_shooter_risk = domain_scores.get('active_shooter', normalized_scores.get('active_shooter', 0.2))
+                extreme_heat_risk = domain_scores.get('extreme_heat', normalized_scores.get('extreme_heat', 0.2))
+                air_quality_risk = domain_scores.get('air_quality', normalized_scores.get('air_quality', 0.2))
+                dam_failure_risk = domain_scores.get('dam_failure', normalized_scores.get('dam_failure', 0.1))
+                vbd_risk = domain_scores.get('vector_borne_disease', normalized_scores.get('vector_borne_disease', 0.1))
+                cybersecurity_risk = domain_scores.get('cybersecurity', normalized_scores.get('cybersecurity', 0.2))
+                utilities_risk = domain_scores.get('utilities', normalized_scores.get('utilities', 0.2))
+
+                record = {
+                    'jurisdiction_id': jid,
+                    'jurisdiction': j['name'],
+                    'county': county_name,
+                    'fips_code': exporter._get_county_fips_code(county_name) or '',
+                    'total_risk_score': round(comprehensive_risk.get('total_risk_score', 0), 4),
+                    'residual_risk': round(comprehensive_risk.get('residual_risk', 0), 4),
+                    'exposure': round(risk_data.get('exposure', 0), 4),
+                    'vulnerability': round(risk_data.get('vulnerability', 0), 4),
+                    'resilience': round(risk_data.get('resilience', 0), 4),
+                    'health_impact_factor': round(risk_data.get('health_impact_factor', 1.0), 4),
+                    'natural_hazards_risk': round(float(natural_hazards_risk or 0), 4),
+                    'health_risk': round(float(health_risk or 0), 4),
+                    'active_shooter_risk': round(float(active_shooter_risk or 0), 4),
+                    'extreme_heat_risk': round(float(extreme_heat_risk or 0), 4),
+                    'air_quality_risk': round(float(air_quality_risk or 0), 4),
+                    'dam_failure_risk': round(float(dam_failure_risk or 0), 4),
+                    'vector_borne_disease_risk': round(float(vbd_risk or 0), 4),
+                    'cybersecurity_risk': round(float(cybersecurity_risk or 0), 4),
+                    'utilities_risk': round(float(utilities_risk or 0), 4),
+                    'flood_risk': round(float(natural_hazards.get('flood', 0) if isinstance(natural_hazards, dict) else 0), 4),
+                    'tornado_risk': round(float(natural_hazards.get('tornado', 0) if isinstance(natural_hazards, dict) else 0), 4),
+                    'winter_storm_risk': round(float(natural_hazards.get('winter_storm', 0) if isinstance(natural_hazards, dict) else 0), 4),
+                    'thunderstorm_risk': round(float(natural_hazards.get('thunderstorm', 0) if isinstance(natural_hazards, dict) else 0), 4),
+                    'lat': centroid.get('lat', 44.5),
+                    'lon': centroid.get('lon', -89.5),
+                    'calculation_timestamp': datetime.now().isoformat(),
+                    'framework_version': '2.6.0',
+                    'data_source': 'CARA'
+                }
+                all_data.append(record)
+            except Exception as e:
+                logger.warning(f"Failed to process jurisdiction {j['id']}: {e}")
+
+        if not all_data:
+            return jsonify({'error': 'No data was generated', 'success': False}), 500
+
+        output = io.StringIO()
+        fieldnames = list(all_data[0].keys())
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(all_data)
+
+        csv_bytes = output.getvalue().encode('utf-8')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'cara_risk_scores_{timestamp}.csv'
+
+        logger.info(f"Synchronous CSV export complete: {len(all_data)} jurisdictions")
+
+        return Response(
+            csv_bytes,
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
         )
-        
-        db.session.add(job)
-        db.session.commit()
-        
-        logger.info(f"Created export job {job.id}")
-        
-        return jsonify({
-            'status': 'job_created',
-            'job_id': str(job.id),
-            'message': 'Export job started. Use the job_id to check progress.',
-            'status_url': f"/api/gis/jobs/{job.id}/status",
-            'estimated_duration_minutes': 5
-        })
-        
+
     except Exception as e:
-        logger.error(f"Error creating GIS export job: {e}")
+        logger.error(f"Error in synchronous GIS export: {e}")
         return jsonify({
-            'error': 'Failed to create export job',
-            'message': 'An internal error occurred. Please try again.'
+            'error': 'Failed to generate export',
+            'message': str(e)
         }), 500
 
 @gis_export_bp.route('/download/csv/<filename>', methods=['GET'])

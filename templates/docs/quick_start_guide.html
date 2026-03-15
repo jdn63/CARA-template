@@ -34,13 +34,13 @@
                     <h2 class="h4 mb-0">Overview</h2>
                 </div>
                 <div class="card-body">
-                    <p>CARA is designed to help public health departments, healthcare coalitions, and emergency managers evaluate and respond to a variety of risks across your jurisdiction.</p>
+                    <p>CARA is designed to help public health departments, healthcare coalitions, and emergency managers evaluate and respond to a variety of risks across Wisconsin.</p>
                     
                     <h3 class="h5">What This Tool Does</h3>
                     <p>This tool provides:</p>
                     <ul>
                         <li>Comprehensive risk assessments for natural hazards, health risks, active shooter scenarios, and infrastructure vulnerabilities</li>
-                        <li>Geospatial visualization of risks across all configured jurisdictions</li>
+                        <li>Geospatial visualization of risks across all Wisconsin counties and tribal areas</li>
                         <li>Regional aggregation of data by Healthcare Emergency Readiness Coalition (HERC) regions</li>
                         <li>Printable risk summaries for planning and reporting</li>
                         <li>Compatibility with Kaiser Permanente HVA export for hospital preparedness programs</li>
@@ -78,8 +78,8 @@
                     
                     <h3 class="h5">Health Risks</h3>
                     <ul>
-                        <li>State health department disease surveillance</li>
-                        <li>CDC COVID-19, influenza, and RSV activity reports (via state health department)</li>
+                        <li>Wisconsin Department of Health Services disease surveillance</li>
+                        <li>CDC COVID-19, influenza, and RSV activity reports (via Wisconsin DHS)</li>
                         <li>Respiratory illness surveillance data (Flu, COVID, RSV)</li>
                     </ul>
                     
@@ -90,13 +90,25 @@
                         <li>Housing and demographic data</li>
                     </ul>
                     
+                    <h3 class="h5">Vector-Borne Disease</h3>
+                    <ul>
+                        <li>Wisconsin DHS EPHT (WEDSS) — county-level Lyme disease and West Nile Virus incidence rates (lyme-county.csv, west-nile-data-county.csv)</li>
+                        <li>NOAA/IPCC AR6 climate range expansion projections for tick and mosquito habitat</li>
+                    </ul>
+
+                    <h3 class="h5">Dam Failure</h3>
+                    <ul>
+                        <li>WI DNR Dam Safety ArcGIS FeatureServer (primary) — dam inventory, hazard classification, condition ratings, EAP status</li>
+                        <li>USACE National Inventory of Dams (NID) ArcGIS FeatureServer (fallback)</li>
+                    </ul>
+
                     <h3 class="h5">Additional Risk Factors</h3>
                     <ul>
                         <li>Gun Violence Archive (2023 mass shooting data)</li>
                         <li>National Center for Education Statistics School Survey data (SSOCS 2019-2020)</li>
                         <li>EPA AirNow API for air quality monitoring</li>
                         <li>NOAA/NWS heat forecasting data</li>
-                        <li>State Heat Vulnerability Index</li>
+                        <li>Wisconsin DHS Heat Vulnerability Index</li>
                     </ul>
                     
                     <p><strong>Data Refresh Schedule:</strong> Different data sources update at varying frequencies, from daily weather data to annual census information. The tool uses an intelligent caching system to maintain the most recent data while handling API limitations.</p>
@@ -110,7 +122,7 @@
                 <div class="card-body">
                     <h3 class="h5">Accessing Jurisdiction Data</h3>
                     <ol>
-                        <li><strong>Start at the home page:</strong> The interactive map displays risk levels across your jurisdiction.</li>
+                        <li><strong>Start at the home page:</strong> The interactive map displays risk levels across Wisconsin.</li>
                         <li><strong>Select a jurisdiction:</strong> Click on any county or tribal area to view its specific risk profile.</li>
                         <li><strong>Explore the dashboard:</strong> Each jurisdiction dashboard provides detailed breakdowns of various risk factors.</li>
                     </ol>
@@ -139,29 +151,30 @@
                     <h3 class="h5">Understanding Risk Scores</h3>
                     <p>Risk scores range from 0.0 to 1.0 and are categorized as follows:</p>
                     <ul>
-                        <li><span class="badge bg-success">0.0 - 0.3: High Readiness</span> - The jurisdiction has strong preparedness for this risk type.</li>
-                        <li><span class="badge bg-warning">0.3 - 0.6: Moderate Readiness</span> - Some preparedness measures are in place, but improvements are recommended.</li>
-                        <li><span class="badge bg-danger">0.6 - 1.0: Development Needed</span> - Significant improvements to preparedness are recommended.</li>
+                        <li><span class="badge bg-secondary">0.0 - 0.2: Very Low</span> - Minimal risk; strong existing capacity.</li>
+                        <li><span class="badge bg-success">0.2 - 0.4: Low</span> - Low risk; preparedness measures are largely in place.</li>
+                        <li><span class="badge bg-warning text-dark">0.4 - 0.7: Moderate</span> - Elevated risk; targeted improvements are recommended.</li>
+                        <li><span class="badge bg-danger">0.7 - 1.0: High</span> - Significant risk; prioritized preparedness action is warranted.</li>
                     </ul>
                     
-                    <h3 class="h5">Risk Score Calculation</h3>
-                    <p>Each risk score is calculated using the formula:</p>
-                    <p><strong>Residual Risk = (Exposure × Vulnerability × Health Impact Factor) - (Resilience Factor × Maximum Risk)</strong></p>
+                    <h3 class="h5">Risk Score Calculation (EVR Framework)</h3>
+                    <p>Individual domain risk scores are calculated using the Exposure-Vulnerability-Resilience (EVR) formula:</p>
+                    <p><strong>Residual Risk = (Exposure &times; Vulnerability) &times; (2.0 &minus; Resilience) &times; Health Impact Factor</strong></p>
                     <p>Where:</p>
                     <ul>
-                        <li><strong>Exposure</strong> - The likelihood and frequency of the hazard</li>
-                        <li><strong>Vulnerability</strong> - The susceptibility of the population, including SVI factors</li>
-                        <li><strong>Health Impact Factor</strong> - The specific health consequences (1.0-1.5)</li>
-                        <li><strong>Resilience</strong> - Existing preparedness and mitigation measures</li>
+                        <li><strong>Exposure (0&ndash;1)</strong> - Hazard likelihood based on historical data and geographic factors</li>
+                        <li><strong>Vulnerability (0&ndash;1)</strong> - Population and infrastructure susceptibility, including CDC SVI themes and Census demographics</li>
+                        <li><strong>Resilience (0&ndash;1)</strong> - Community adaptive capacity; acts as an amplifier: low resilience (0.1) yields a 1.9&times; multiplier, high resilience (0.9) yields a 1.1&times; multiplier</li>
+                        <li><strong>Health Impact Factor (0.8&ndash;1.5)</strong> - Derived from FEMA NRI data; adjusts for the specific health consequences of each hazard</li>
                     </ul>
                     
                     <h3 class="h5">Temporal Assessment (BSTA Framework)</h3>
                     <p>Risk is evaluated across four timeframes:</p>
                     <ul>
-                        <li><strong>Baseline (50%)</strong> - Long-term risk over 1-10 years</li>
-                        <li><strong>Seasonal (20%)</strong> - Cyclical risk patterns</li>
-                        <li><strong>Trend (20%)</strong> - Emerging patterns over 2-5 years</li>
-                        <li><strong>Acute (10%)</strong> - Immediate threats (days to weeks)</li>
+                        <li><strong>Baseline (60%)</strong> - Long-term risk over 1-10 years</li>
+                        <li><strong>Seasonal (25%)</strong> - Cyclical risk patterns</li>
+                        <li><strong>Trend (15%)</strong> - Real data trends from NOAA Storm Events, OpenFEMA, climate projections, and Census demographics (not applicable to infectious disease)</li>
+                        <li><strong>Acute (0%/15%)</strong> - Context only for most domains; 15% weight for infectious disease using WI DHS surveillance data</li>
                     </ul>
                 </div>
             </div>
@@ -172,7 +185,7 @@
                 </div>
                 <div class="card-body">
                     <h3 class="h5">HERC Region Integration</h3>
-                    <p>The tool integrates regional groupings for a broader view of healthcare preparedness:</p>
+                    <p>The tool integrates Wisconsin's seven Healthcare Emergency Readiness Coalition (HERC) regions for a broader view of healthcare preparedness:</p>
                     <ul>
                         <li>Aggregated risk scores across all counties in each HERC region</li>
                         <li>Regional healthcare capacity data (when available)</li>

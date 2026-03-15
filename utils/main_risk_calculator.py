@@ -133,7 +133,7 @@ class CARARiskCalculator:
         weights = self.config_manager.get_domain_weights('natural_hazards')
         if not weights:
             # Use equal weights if no configuration
-            hazards = ['flood', 'tornado', 'winter_storm', 'wildfire']
+            hazards = ['flood', 'tornado', 'winter_storm', 'thunderstorm']
             weights = {hazard: 1.0/len(hazards) for hazard in hazards}
         
         # Calculate weighted score
