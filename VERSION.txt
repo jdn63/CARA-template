@@ -1,9 +1,13 @@
 CARA - Comprehensive Automated Risk Assessment
 Version: 2.5
 Release date: 2026-03-15
-Push: v21
+Push: v22
 
 Changelog summary:
+- v22: Temporarily hide Tribal jurisdictions from public dropdown and block
+  direct URL access to Tribal dashboards pending Tribal data sovereignty
+  protocol finalization. No Tribal data or logic removed. Fully reversible;
+  see .local/tribal_access_reversal.md for exact steps.
 - v21: Update GitHub Actions to Node.js 24-compatible versions:
   actions/checkout@v3 -> @v4, actions/setup-python@v4 -> @v5
 - v20: README replaced with clean 7-domain version; county_baselines.yaml

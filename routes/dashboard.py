@@ -11,7 +11,7 @@ import logging
 import time
 import tempfile
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, send_file
+from flask import Blueprint, render_template, redirect, url_for, send_file, flash
 from utils.data_processor import process_risk_data, get_historical_risk_data
 from utils.predictive_analysis import RiskPredictor
 from utils.metadata_config import EXCLUDED_RISK_FIELDS
@@ -95,6 +95,18 @@ def sanitize_risk_data(risk_data):
 def dashboard(jurisdiction_id):
     """Main dashboard for jurisdiction risk assessment"""
     try:
+        # TRIBAL HIDE: Block direct URL access to Tribal dashboards while
+        # Tribal data sovereignty protocols are finalized. To restore Tribal
+        # access, remove this block (the comment and the if/flash/redirect).
+        # See .local/tribal_access_reversal.md for full reversal instructions.
+        if str(jurisdiction_id).startswith('T'):
+            flash(
+                "Tribal jurisdiction dashboards are temporarily unavailable "
+                "while we finalize data access protocols with our Tribal partners.",
+                "info"
+            )
+            return redirect(url_for('public.index'))
+
         # Check if this ID is in our special mapping
         if jurisdiction_id in ID_MAPPING:
             mapped_id = ID_MAPPING[jurisdiction_id]

@@ -638,6 +638,14 @@ def get_wi_jurisdictions() -> List[Dict]:
             # Skip secondary entries (multi-county duplicates for GIS/HERC)
             if not jurisdiction.get('primary', True):
                 continue
+
+            # TRIBAL HIDE: Temporarily exclude Tribal jurisdictions (IDs starting with 'T')
+            # from the public dropdown while Tribal data sovereignty protocols are finalized.
+            # To restore: remove the four lines below (the comment and the if/continue block).
+            # Also restore the help text in templates/index.html and remove the guard in
+            # routes/dashboard.py. See .local/tribal_access_reversal.md for full instructions.
+            if str(jurisdiction.get('id', '')).startswith('T'):
+                continue
             
             # Create a copy to avoid modifying the original
             j = dict(jurisdiction)

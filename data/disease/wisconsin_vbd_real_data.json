@@ -2,7 +2,7 @@
   "metadata": {
     "description": "County-level vector-borne disease case data for Wisconsin from WI DHS EPHT CSV downloads",
     "version": "3.0.0",
-    "last_updated": "2026-03-15",
+    "last_updated": "2026-03-26",
     "data_years": "2019-2024",
     "sources": {
       "lyme_disease": {
@@ -22,7 +22,7 @@
         "lyme_latest_cases": 6469,
         "wnv_latest_cases": 0,
         "wnv_avg_annual": 18,
-        "source": "WI DHS EPHT CSV downloads, fetched 2026-03-15"
+        "source": "WI DHS EPHT CSV downloads, fetched 2026-03-26"
       }
     },
     "methodology": "County-level incidence rates from official WI DHS EPHT CSV data downloads. Crude rates per 100,000 population. Multi-year averages computed from the most recent 6 years of available data."
