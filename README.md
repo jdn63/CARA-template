@@ -100,5 +100,5 @@ to CARA benefit all users.
 
 ## Citation
 
-Developed and maintained by Jaime Noriega. If you use CARA in a publication or
+Developed and maintained by Jaime Niedermeier. If you use CARA in a publication or
 policy document, please cite the reference implementation and this template repository.
