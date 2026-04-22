@@ -29,8 +29,35 @@ AQI_BREAKPOINTS = [
 
 class AirQualityDomain(BaseDomain):
 
+    DOMAIN_ID = "air_quality"
     DOMAIN_KEY = "air_quality"
+    DOMAIN_LABEL = "Air Quality Risk"
     DEFAULT_WEIGHT = 0.12
+
+    def domain_info(self):
+        return {
+            "id": self.DOMAIN_ID,
+            "label": self.DOMAIN_LABEL,
+            "description": (
+                "Scores ambient air quality risk using AQI or PM2.5/ozone concentration data. "
+                "Compatible with US (EPA AirNow) and international (OpenAQ) data sources."
+            ),
+            "methodology": "Weighted composite: 50% AQI level, 30% unhealthy days, 20% sensitive population exposure.",
+            "applicable_profiles": ["us_state", "international"],
+        }
+
+    def calculate(self, connector_data, jurisdiction_config, profile="international"):
+        jid = jurisdiction_config.get("jurisdiction", {}).get("short_name", "XX")
+        merged = {}
+        for v in connector_data.values():
+            if isinstance(v, dict) and v.get("available", True):
+                merged.update({k: val for k, val in v.items() if k != "available"})
+        data_cache = {self.DOMAIN_KEY: merged}
+        result = self.compute(jurisdiction_id=jid, data_cache=data_cache)
+        result.setdefault("available", result.get("score") is not None)
+        result.setdefault("confidence", 0.5 if result.get("available") else 0.0)
+        result.setdefault("dominant_factor", "Air quality exposure")
+        return result
 
     def compute(self, jurisdiction_id: str, data_cache: dict) -> dict:
         try:
@@ -72,19 +99,7 @@ class AirQualityDomain(BaseDomain):
             return self._error_result()
 
     def _fetch(self, jurisdiction_id: str) -> dict:
-        result: dict = {"sources": []}
-        for connector_key in ("airnow", "openaq", "noaa_gsod"):
-            connector = self.connector_registry.get(connector_key)
-            if connector is None:
-                continue
-            try:
-                data = connector.fetch(jurisdiction_id)
-                result.update(data)
-                result["sources"].append(connector_key)
-                break
-            except Exception as exc:
-                logger.warning("Connector %s failed: %s", connector_key, exc)
-        return result
+        return {"sources": []}
 
     def _score_aqi(self, data: dict) -> float:
         aqi = data.get("current_aqi") or data.get("aqi_annual_median", 0)
@@ -164,4 +179,4 @@ class AirQualityDomain(BaseDomain):
         }
 
     def _weight(self) -> float:
-        return self.config.get("weight", self.DEFAULT_WEIGHT)
+        return self.DEFAULT_WEIGHT

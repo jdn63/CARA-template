@@ -28,7 +28,7 @@ class NavigationController {
      */
     updateNavbarDisplay() {
         const jurisdiction = StorageUtils.getSelectedJurisdiction();
-        const hercRegion = StorageUtils.getSelectedJurisdiction();
+        const hercRegion = StorageUtils.getSelectedHercRegion();
         
         if (jurisdiction) {
             DomUtils.updateElementContent('jurisdiction-display', 

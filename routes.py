@@ -74,16 +74,63 @@ def register_routes(app: Flask) -> None:
             risk_class = classify_risk(total_score)
 
             regional_group = manager.get_group_for_jurisdiction(jurisdiction_id)
+            framework = _load_framework(profile)
+            framework_name = getattr(framework, 'name', None) if framework else None
+
+            tier = risk_class.get('level', 'minimal')
+            tier_color_map = {
+                'critical': 'danger', 'high': 'danger',
+                'moderate': 'warning', 'low': 'success', 'minimal': 'secondary',
+            }
+            composite = {
+                'score': total_score,
+                'tier': tier,
+                'tier_color': tier_color_map.get(tier, 'secondary'),
+            }
+
+            domains_view = []
+            action_items = []
+            for domain_id, weight in weights.items():
+                result = domain_results.get(domain_id, {}) or {}
+                domains_view.append({
+                    'id': domain_id,
+                    'label': domain_id.replace('_', ' ').title(),
+                    'weight': weight,
+                    'score': result.get('score'),
+                    'data_sources': result.get('data_sources', []),
+                    'components': result.get('components', {}),
+                })
+                for item in result.get('action_plan_items', []) or []:
+                    action_items.append(item)
+
+            top_domain = None
+            scored = [d for d in domains_view if d['score'] is not None and d['components']]
+            if scored:
+                top = max(scored, key=lambda d: d['score'])
+                top_domain = {
+                    'label': top['label'],
+                    'components': top['components'],
+                }
+
+            all_jurisdictions = manager.get_all()
 
             return render_template(
                 'dashboard.html',
                 jurisdiction=jurisdiction,
-                total_score=total_score,
-                risk_level=risk_class,
-                domain_results=domain_results,
-                breakdown=breakdown,
+                composite=composite,
+                domains=domains_view,
+                action_items=action_items,
+                top_domain=top_domain,
+                all_jurisdictions=all_jurisdictions,
+                framework_name=framework_name,
                 profile=profile,
+                last_refresh=None,
+                map_html=None,
+                framework_summary=None,
                 regional_group=regional_group,
+                breakdown=breakdown,
+                domain_results=domain_results,
+                app_name=jconfig.get('jurisdiction', {}).get('name'),
             )
         except Exception as e:
             logger.error(f"Dashboard error for {jurisdiction_id}: {e}", exc_info=True)
@@ -104,7 +151,53 @@ def register_routes(app: Flask) -> None:
         """Methodology documentation page."""
         profile = os.environ.get('CARA_PROFILE', 'international')
         framework = _load_framework(profile)
-        return render_template('methodology.html', profile=profile, framework=framework)
+        framework_name = getattr(framework, 'name', None) if framework else None
+        framework_key = 'who_ihr' if profile == 'international' else 'cdc_phep'
+
+        try:
+            jconfig_path = os.path.join('config', 'jurisdiction.yaml')
+            with open(jconfig_path, 'r') as f:
+                jconfig = yaml.safe_load(f) or {}
+        except Exception:
+            jconfig = {}
+        jurisdiction_name = jconfig.get('jurisdiction', {}).get('name', 'CARA')
+
+        weights = load_weights(
+            profile=profile,
+            jurisdiction_overrides=jconfig.get('overrides', {}).get('weights'),
+        )
+
+        try:
+            profile_path = os.path.join('config', 'profiles', f'{profile}.yaml')
+            with open(profile_path, 'r') as f:
+                profile_cfg = yaml.safe_load(f) or {}
+        except Exception:
+            profile_cfg = {}
+        domain_meta = profile_cfg.get('domains', {}) or {}
+
+        domains = []
+        for domain_id, weight in weights.items():
+            meta = domain_meta.get(domain_id, {}) or {}
+            domains.append({
+                'id': domain_id,
+                'label': meta.get('label', domain_id.replace('_', ' ').title()),
+                'weight': weight,
+                'source': meta.get('primary_source', 'See profile YAML'),
+                'frequency': meta.get('refresh_frequency', 'Varies'),
+            })
+
+        data_source_detail = profile_cfg.get('data_source_detail') or None
+
+        return render_template(
+            'methodology.html',
+            profile=profile,
+            framework=framework,
+            framework_name=framework_name,
+            framework_key=framework_key,
+            jurisdiction_name=jurisdiction_name,
+            domains=domains,
+            data_source_detail=data_source_detail,
+        )
 
     @app.route('/about')
     def about():

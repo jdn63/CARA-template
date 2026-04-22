@@ -895,3 +895,160 @@ html {
     display: inline-block;
     width: 1em;
 }
+/* ── Categorized compact tile layout ─────────────────────────────────────── */
+
+.category-section {
+    margin-bottom: 2rem;
+}
+
+.category-header {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #dc3545;
+    border-bottom: 2px solid #dc3545;
+    padding-bottom: 3px;
+    margin-bottom: 6px;
+}
+
+.category-disease,
+.category-hazards,
+.category-environmental,
+.category-safety,
+.category-community { color: #dc3545; border-color: #dc3545; }
+
+/* Compact tile overrides — applied via .compact-tile on the col div */
+.compact-tile .card {
+    margin-bottom: 0;
+    font-size: 0.78rem;
+}
+
+.compact-tile .card:hover {
+    transform: none;
+}
+
+.compact-tile .card-header {
+    padding: 0.3rem 0.6rem;
+    background: linear-gradient(135deg, #e8f2f7 0%, #f8f9fa 100%);
+}
+
+.compact-tile .card-header .card-title {
+    font-size: 0.78rem;
+    margin-bottom: 0;
+    line-height: 1.3;
+}
+
+.compact-tile .card-header .badge {
+    font-size: 0.6rem;
+}
+
+.compact-tile .card-body {
+    padding: 0.4rem 0.6rem;
+}
+
+.compact-tile h3,
+.compact-tile .card-body > .d-flex > h3 {
+    font-size: 1.35rem;
+    margin-bottom: 0.1rem;
+}
+
+.compact-tile h6 {
+    font-size: 0.72rem;
+    margin-bottom: 0.2rem;
+}
+
+.compact-tile .table {
+    font-size: 0.72rem;
+    margin-bottom: 0.25rem;
+}
+
+.compact-tile .table th,
+.compact-tile .table td {
+    padding: 0.15rem 0.3rem;
+}
+
+.compact-tile .progress {
+    height: 6px;
+    margin-bottom: 0.2rem;
+}
+
+.compact-tile .alert {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    margin-bottom: 0.25rem;
+}
+
+.compact-tile .mb-3 { margin-bottom: 0.4rem !important; }
+.compact-tile .mb-4 { margin-bottom: 0.5rem !important; }
+.compact-tile .mt-3 { margin-top: 0.4rem !important; }
+
+.compact-tile .small,
+.compact-tile small {
+    font-size: 0.68rem;
+}
+
+/* Keep row tight */
+.row.g-2 > .compact-tile {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+/* ── Compact tile spacing standardization ────────────────────────────────── */
+
+/* Consistent gap between card-body sections */
+.compact-tile .card-body > div {
+    margin-bottom: 0.4rem;
+}
+.compact-tile .card-body > div:last-child {
+    margin-bottom: 0;
+}
+
+/* Score row: prevent label/value crowding */
+.compact-tile .d-flex.justify-content-between h6 {
+    font-size: 0.73rem;
+    margin-bottom: 0;
+    line-height: 1.3;
+}
+
+/* EVR component boxes: tighter padding, smaller value number */
+.compact-tile .border.rounded.text-center {
+    padding: 0.2rem 0.15rem !important;
+}
+.compact-tile .border.rounded.text-center .h5 {
+    font-size: 0.95rem;
+    line-height: 1.2;
+    margin-bottom: 0.1rem;
+}
+.compact-tile .border.rounded.text-center .badge {
+    font-size: 0.58rem;
+    margin-bottom: 0.15rem !important;
+}
+
+/* "Risk Components" section header — tighten bottom gap */
+.compact-tile h6.text-muted {
+    font-size: 0.72rem;
+    margin-bottom: 0.2rem;
+}
+
+/* Card-body: standardize padding */
+.compact-tile .card-body {
+    padding: 0.5rem 0.65rem;
+}
+
+/* Card-header: consistent padding */
+.compact-tile .card-header {
+    padding: 0.35rem 0.65rem;
+}
+
+/* Data-source notes at bottom of tiles */
+.compact-tile .mt-3 small.text-muted {
+    font-size: 0.65rem;
+    line-height: 1.3;
+}
+
+/* Row g-2 inside compact tiles: prevent outer bleed */
+.compact-tile .row.g-2 {
+    margin-left: 0;
+    margin-right: 0;
+}

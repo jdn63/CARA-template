@@ -46,8 +46,35 @@ DISEASE_CONFIG = {
 
 class VectorBorneDiseaseDomain(BaseDomain):
 
+    DOMAIN_ID = "vector_borne_disease"
     DOMAIN_KEY = "vector_borne_disease"
+    DOMAIN_LABEL = "Vector-Borne Disease Risk"
     DEFAULT_WEIGHT = 0.07
+
+    def domain_info(self):
+        return {
+            "id": self.DOMAIN_ID,
+            "label": self.DOMAIN_LABEL,
+            "description": (
+                "Scores risk from vector-borne diseases (Lyme, West Nile, Dengue, Malaria, etc.) "
+                "using surveillance data and climate-adjusted range expansion projections."
+            ),
+            "methodology": "EVR composite: 40% incidence, 25% climate adjustment, 20% vulnerability, 15% resilience (inverted).",
+            "applicable_profiles": ["us_state", "international"],
+        }
+
+    def calculate(self, connector_data, jurisdiction_config, profile="international"):
+        jid = jurisdiction_config.get("jurisdiction", {}).get("short_name", "XX")
+        merged = {}
+        for v in connector_data.values():
+            if isinstance(v, dict) and v.get("available", True):
+                merged.update({k: val for k, val in v.items() if k != "available"})
+        data_cache = {self.DOMAIN_KEY: merged}
+        result = self.compute(jurisdiction_id=jid, data_cache=data_cache)
+        result.setdefault("available", result.get("score") is not None)
+        result.setdefault("confidence", 0.5 if result.get("available") else 0.0)
+        result.setdefault("dominant_factor", "Vector-borne disease incidence")
+        return result
 
     def compute(self, jurisdiction_id: str, data_cache: dict) -> dict:
         try:
@@ -92,18 +119,7 @@ class VectorBorneDiseaseDomain(BaseDomain):
             return self._error_result()
 
     def _fetch(self, jurisdiction_id: str) -> dict:
-        result: dict = {"sources": []}
-        for connector_key in ("wi_dhs_epht", "who_gho", "cdc_vbd", "world_bank"):
-            connector = self.connector_registry.get(connector_key)
-            if connector is None:
-                continue
-            try:
-                data = connector.fetch(jurisdiction_id)
-                result.update(data)
-                result["sources"].append(connector_key)
-            except Exception as exc:
-                logger.warning("Connector %s failed: %s", connector_key, exc)
-        return result
+        return {"sources": []}
 
     def _score_incidence(self, data: dict) -> float:
         scores = []
@@ -185,4 +201,4 @@ class VectorBorneDiseaseDomain(BaseDomain):
         }
 
     def _weight(self) -> float:
-        return self.config.get("weight", self.DEFAULT_WEIGHT)
+        return self.DEFAULT_WEIGHT

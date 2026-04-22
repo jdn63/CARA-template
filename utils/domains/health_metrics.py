@@ -21,8 +21,35 @@ logger = logging.getLogger(__name__)
 
 class HealthMetricsDomain(BaseDomain):
 
+    DOMAIN_ID = "health_metrics"
     DOMAIN_KEY = "health_metrics"
+    DOMAIN_LABEL = "Health Metrics Risk"
     DEFAULT_WEIGHT = 0.17
+
+    def domain_info(self):
+        return {
+            "id": self.DOMAIN_ID,
+            "label": self.DOMAIN_LABEL,
+            "description": (
+                "Scores population health baseline risk using available health surveillance data. "
+                "Compatible with CDC PLACES, County Health Rankings, WHO GHO, World Bank, and local ministry data."
+            ),
+            "methodology": "Weighted composite: 35% chronic burden, 25% vaccination gap, 25% healthcare access gap, 15% social determinants.",
+            "applicable_profiles": ["us_state", "international"],
+        }
+
+    def calculate(self, connector_data, jurisdiction_config, profile="international"):
+        jid = jurisdiction_config.get("jurisdiction", {}).get("short_name", "XX")
+        merged = {}
+        for v in connector_data.values():
+            if isinstance(v, dict) and v.get("available", True):
+                merged.update({k: val for k, val in v.items() if k != "available"})
+        data_cache = {self.DOMAIN_KEY: merged}
+        result = self.compute(jurisdiction_id=jid, data_cache=data_cache)
+        result.setdefault("available", result.get("score") is not None)
+        result.setdefault("confidence", 0.5 if result.get("available") else 0.0)
+        result.setdefault("dominant_factor", "Population health baseline")
+        return result
 
     def compute(self, jurisdiction_id: str, data_cache: dict) -> dict:
         try:
@@ -66,18 +93,7 @@ class HealthMetricsDomain(BaseDomain):
             return self._error_result()
 
     def _fetch(self, jurisdiction_id: str) -> dict:
-        result: dict = {"sources": []}
-        for connector_key in ("who_gho", "cdc_places", "county_health_rankings", "wi_dhs", "world_bank"):
-            connector = self.connector_registry.get(connector_key)
-            if connector is None:
-                continue
-            try:
-                data = connector.fetch(jurisdiction_id)
-                result.update(data)
-                result["sources"].append(connector_key)
-            except Exception as exc:
-                logger.warning("Connector %s failed: %s", connector_key, exc)
-        return result
+        return {"sources": []}
 
     def _score_chronic_burden(self, data: dict) -> float:
         copd = data.get("copd_prevalence_pct", 6.0)
@@ -156,4 +172,4 @@ class HealthMetricsDomain(BaseDomain):
         }
 
     def _weight(self) -> float:
-        return self.config.get("weight", self.DEFAULT_WEIGHT)
+        return self.DEFAULT_WEIGHT

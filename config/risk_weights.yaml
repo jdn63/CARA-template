@@ -23,18 +23,15 @@ profiles:
     extreme_heat: 0.10
     vector_borne_disease: 0.06
 
-  custom:
-    description: >
-      Override individual jurisdiction weights in jurisdiction.yaml
-      under overrides.weights. Values must sum to 1.0.
-    natural_hazards: null
-    conflict_displacement: null
-    health_metrics: null
-    mass_casualty: null
-    air_quality: null
-    extreme_heat: null
-    dam_failure: null
-    vector_borne_disease: null
+  # Per-jurisdiction weight overrides are not defined here.
+  # To override weights for a specific jurisdiction, add an overrides.weights
+  # block in your jurisdiction.yaml file. The load_weights() function merges
+  # those overrides on top of the active profile weights at runtime.
+  # Example jurisdiction.yaml:
+  #   overrides:
+  #     weights:
+  #       natural_hazards: 0.35
+  #       conflict_displacement: 0.15
 
 temporal_weights:
   current_12_months: 0.50

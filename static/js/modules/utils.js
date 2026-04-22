@@ -91,6 +91,16 @@ export const StorageUtils = {
     },
 
     /**
+     * Get selected HERC region from localStorage
+     * @returns {Object} HERC region data or null
+     */
+    getSelectedHercRegion() {
+        const id = localStorage.getItem('selectedHercId');
+        const name = localStorage.getItem('selectedHercName');
+        return id && name ? { id, name } : null;
+    },
+
+    /**
      * Clear all stored selections
      */
     clearSelections() {

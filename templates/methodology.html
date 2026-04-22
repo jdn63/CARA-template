@@ -41,9 +41,20 @@
               single domain more than a linear mean would, which better reflects the amplifying
               effect of compound vulnerabilities in public health emergencies.
             </p>
+            <p>
+              The final composite score is also on [0, 1] and maps to five risk tiers
+              (matching <code>classify_risk()</code> in <code>utils/risk_engine.py</code>):
+              Minimal (0.00-0.14), Low (0.15-0.34), Moderate (0.35-0.54),
+              High (0.55-0.74), and Critical (0.75-1.00).
+            </p>
             <p class="mb-0">
-              The final composite score is also on [0, 1] and maps to four risk tiers:
-              Low (0.00-0.39), Moderate (0.40-0.59), High (0.60-0.74), and Critical (0.75-1.00).
+              When one or more domains have no data for a jurisdiction, PHRAT excludes them
+              and rescales the surviving weights so the formula remains comparable across
+              jurisdictions. The breakdown returned by <code>calculate_phrat()</code> includes
+              <code>data_coverage</code> (the fraction of total weight that contributed to the
+              score). Treat scores from low-coverage jurisdictions cautiously; a coverage value
+              below 0.7 indicates that the composite is based on less than 70 percent of the
+              configured domain weight.
             </p>
           </div>
         </div>

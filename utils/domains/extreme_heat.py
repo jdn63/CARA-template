@@ -21,11 +21,38 @@ logger = logging.getLogger(__name__)
 
 class ExtremeHeatDomain(BaseDomain):
 
+    DOMAIN_ID = "extreme_heat"
     DOMAIN_KEY = "extreme_heat"
+    DOMAIN_LABEL = "Extreme Heat Risk"
     DEFAULT_WEIGHT = 0.11
 
     HEAT_DAY_THRESHOLD_F = 90.0
     EXTREME_HEAT_DAY_THRESHOLD_F = 100.0
+
+    def domain_info(self):
+        return {
+            "id": self.DOMAIN_ID,
+            "label": self.DOMAIN_LABEL,
+            "description": (
+                "Scores extreme heat risk using meteorological data and population vulnerability. "
+                "Compatible with US (NOAA/NWS) and international (NOAA GSOD, ERA5) data sources."
+            ),
+            "methodology": "Weighted composite: 35% climatological exposure, 30% vulnerability, 20% resilience (inverted), 15% health impact.",
+            "applicable_profiles": ["us_state", "international"],
+        }
+
+    def calculate(self, connector_data, jurisdiction_config, profile="international"):
+        jid = jurisdiction_config.get("jurisdiction", {}).get("short_name", "XX")
+        merged = {}
+        for v in connector_data.values():
+            if isinstance(v, dict) and v.get("available", True):
+                merged.update({k: val for k, val in v.items() if k != "available"})
+        data_cache = {self.DOMAIN_KEY: merged}
+        result = self.compute(jurisdiction_id=jid, data_cache=data_cache)
+        result.setdefault("available", result.get("score") is not None)
+        result.setdefault("confidence", 0.5 if result.get("available") else 0.0)
+        result.setdefault("dominant_factor", "Heat exposure")
+        return result
 
     def compute(self, jurisdiction_id: str, data_cache: dict) -> dict:
         try:
@@ -70,19 +97,7 @@ class ExtremeHeatDomain(BaseDomain):
             return self._error_result()
 
     def _fetch(self, jurisdiction_id: str) -> dict:
-        result: dict = {"sources": []}
-        for connector_key in ("nws", "noaa_gsod", "open_meteo"):
-            connector = self.connector_registry.get(connector_key)
-            if connector is None:
-                continue
-            try:
-                data = connector.fetch(jurisdiction_id)
-                result.update(data)
-                result["sources"].append(connector_key)
-                break
-            except Exception as exc:
-                logger.warning("Connector %s failed: %s", connector_key, exc)
-        return result
+        return {"sources": []}
 
     def _score_exposure(self, data: dict) -> float:
         days_90 = data.get("days_above_90f_annual", 10)
@@ -171,4 +186,4 @@ class ExtremeHeatDomain(BaseDomain):
         }
 
     def _weight(self) -> float:
-        return self.config.get("weight", self.DEFAULT_WEIGHT)
+        return self.DEFAULT_WEIGHT

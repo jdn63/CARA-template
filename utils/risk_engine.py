@@ -47,7 +47,13 @@ def load_weights(profile: str, jurisdiction_overrides: Optional[Dict] = None) ->
         logger.error(f"Failed to load weights config: {e}")
         weights_config = {}
 
-    weights = dict(weights_config.get('profiles', {}).get(profile, {}))
+    raw = weights_config.get('profiles', {}).get(profile, {})
+    # Filter to numeric values only — the config may contain documentation strings
+    # or null placeholders (e.g. in the custom profile section).
+    weights = {
+        k: float(v) for k, v in raw.items()
+        if isinstance(v, (int, float)) and v is not None
+    }
 
     if jurisdiction_overrides:
         for domain, weight in jurisdiction_overrides.items():
@@ -212,8 +218,8 @@ def compute_all_domains(
         pass
 
     try:
-        from utils.domains.vector_borne_disease import VectorBorneDomain
-        all_domain_classes['vector_borne_disease'] = VectorBorneDomain
+        from utils.domains.vector_borne_disease import VectorBorneDiseaseDomain
+        all_domain_classes['vector_borne_disease'] = VectorBorneDiseaseDomain
     except ImportError:
         pass
 

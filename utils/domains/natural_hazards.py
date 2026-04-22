@@ -28,7 +28,9 @@ class NaturalHazardsDomain(BaseDomain):
     Health Impact: excess mortality, displacement, health-facility disruption
     """
 
+    DOMAIN_ID = "natural_hazards"
     DOMAIN_KEY = "natural_hazards"
+    DOMAIN_LABEL = "Natural Hazards Risk"
     DEFAULT_WEIGHT = 0.28
 
     HAZARD_TYPES = [
@@ -36,16 +38,44 @@ class NaturalHazardsDomain(BaseDomain):
         "hurricane", "ice_storm", "drought", "landslide", "tsunami",
     ]
 
-    def __init__(self, config: dict, connector_registry):
-        super().__init__(config, connector_registry)
-        self.hazard_weights = config.get("hazard_weights", {
-            "flood": 0.25,
-            "tornado": 0.20,
-            "severe_storm": 0.20,
-            "wildfire": 0.15,
-            "earthquake": 0.10,
-            "other": 0.10,
-        })
+    DEFAULT_HAZARD_WEIGHTS = {
+        "flood": 0.25,
+        "tornado": 0.20,
+        "severe_storm": 0.20,
+        "wildfire": 0.15,
+        "earthquake": 0.10,
+        "other": 0.10,
+    }
+
+    def __init__(self, weights=None):
+        super().__init__(weights)
+        self.hazard_weights = self.DEFAULT_HAZARD_WEIGHTS.copy()
+
+    def domain_info(self):
+        return {
+            "id": self.DOMAIN_ID,
+            "label": self.DOMAIN_LABEL,
+            "description": (
+                "Scores risk from natural hazards using an Exposure-Vulnerability-Resilience "
+                "framework. Compatible with US (FEMA/NOAA) and international (EM-DAT/ReliefWeb) "
+                "data sources."
+            ),
+            "methodology": "EVR composite: 40% exposure, 30% vulnerability, 20% resilience (inverted), 10% health impact.",
+            "applicable_profiles": ["us_state", "international"],
+        }
+
+    def calculate(self, connector_data, jurisdiction_config, profile="international"):
+        jid = jurisdiction_config.get("jurisdiction", {}).get("short_name", "XX")
+        merged = {}
+        for v in connector_data.values():
+            if isinstance(v, dict) and v.get("available", True):
+                merged.update({k: val for k, val in v.items() if k != "available"})
+        data_cache = {self.DOMAIN_KEY: merged}
+        result = self.compute(jurisdiction_id=jid, data_cache=data_cache)
+        result.setdefault("available", result.get("score") is not None)
+        result.setdefault("confidence", 0.5 if result.get("available") else 0.0)
+        result.setdefault("dominant_factor", "Natural hazard exposure")
+        return result
 
     def compute(self, jurisdiction_id: str, data_cache: dict) -> dict:
         """Return scored result dict with domain_key, score, components, metadata."""
@@ -90,21 +120,7 @@ class NaturalHazardsDomain(BaseDomain):
             return self._error_result()
 
     def _fetch(self, jurisdiction_id: str) -> dict:
-        """Fetch from registered connectors; gracefully degrade if unavailable."""
-        result: dict = {"sources": []}
-
-        for connector_key in ("em_dat", "open_fema", "noaa_storm_events"):
-            connector = self.connector_registry.get(connector_key)
-            if connector is None:
-                continue
-            try:
-                data = connector.fetch(jurisdiction_id)
-                result.update(data)
-                result["sources"].append(connector_key)
-            except Exception as exc:
-                logger.warning("Connector %s failed: %s", connector_key, exc)
-
-        return result
+        return {"sources": []}
 
     def _score_exposure(self, data: dict) -> float:
         event_count = data.get("event_count", 0)
@@ -189,4 +205,4 @@ class NaturalHazardsDomain(BaseDomain):
         }
 
     def _weight(self) -> float:
-        return self.config.get("weight", self.DEFAULT_WEIGHT)
+        return self.DEFAULT_WEIGHT
